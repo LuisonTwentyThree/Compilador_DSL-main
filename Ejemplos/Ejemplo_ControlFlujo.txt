@@ -1,0 +1,57 @@
+// ============================================================
+// EJEMPLO: CONTROL DE FLUJO
+// IF, WHILE, FOR y DO-WHILE
+// ============================================================
+
+// --- IF SIMPLE ---
+CREAR NUMERO num = 50;
+
+IF (num > 30) {
+    MOSTRAR 1;
+}
+
+IF (num < 30) {
+    MOSTRAR 0;
+}
+
+// --- WHILE LOOP ---
+CREAR NUMERO contador = 0;
+
+WHILE (contador < 3) {
+    MOSTRAR contador;
+    contador = contador + 1;
+}
+
+// --- FOR LOOP ---
+CREAR NUMERO i = 0;
+
+FOR (i = 0; i < 5; i = i + 1) {
+    MOSTRAR i;
+}
+
+// --- DO-WHILE LOOP ---
+CREAR NUMERO j = 0;
+
+DO {
+    MOSTRAR j;
+    j = j + 1;
+} WHILE (j < 3)
+
+// --- EXPRESIONES CONDICIONALES ---
+CREAR NUMERO a = 100;
+CREAR NUMERO b = 50;
+
+IF (a == b) {
+    MOSTRAR 0;
+}
+
+IF (a != b) {
+    MOSTRAR 1;
+}
+
+IF (a >= b) {
+    MOSTRAR 2;
+}
+
+// Final
+MOSTRAR 999;

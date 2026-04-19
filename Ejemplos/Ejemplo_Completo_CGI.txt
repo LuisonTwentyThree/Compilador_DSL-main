@@ -1,0 +1,212 @@
+// ============================================================
+// EJEMPLO COMPLETO PARA GENERACIÓN DE CÓDIGO INTERMEDIO
+// Compilador DSL - Fase de Código de Tres Direcciones
+// ============================================================
+
+// ============================================================
+// 1. DECLARACIONES BÁSICAS Y OPERACIONES MATEMÁTICAS
+// ============================================================
+
+CREAR NUMERO x = 10;
+CREAR NUMERO y = 20;
+CREAR NUMERO resultado = 0;
+
+resultado = x + y;
+resultado = x - y;
+resultado = x * y;
+resultado = x / y;
+resultado = 100 % 3;
+
+MOSTRAR resultado;
+
+// ============================================================
+// 2. ESTRUCTURA: PILA
+// ============================================================
+
+CREAR PILA miPila TAMANO 100;
+
+APILAR 5 EN miPila;
+APILAR 15 EN miPila;
+APILAR 25 EN miPila;
+
+MOSTRAR TOPE EN miPila;
+
+DESAPILAR EN miPila;
+MOSTRAR TOPE EN miPila;
+
+// ============================================================
+// 3. ESTRUCTURA: COLA
+// ============================================================
+
+CREAR COLA miCola TAMANO 50;
+
+ENCOLAR 100 EN miCola;
+ENCOLAR 200 EN miCola;
+ENCOLAR 300 EN miCola;
+
+MOSTRAR FRENTE EN miCola;
+
+DESENCOLAR EN miCola;
+MOSTRAR FRENTE EN miCola;
+
+// ============================================================
+// 4. ESTRUCTURA: LISTA ENLAZADA
+// ============================================================
+
+CREAR LISTA_ENLAZADA miLista;
+
+INSERTAR_FINAL 1 EN miLista;
+INSERTAR_FINAL 2 EN miLista;
+INSERTAR_FINAL 3 EN miLista;
+INSERTAR_INICIO 0 EN miLista;
+
+MOSTRAR TAMANO EN miLista;
+
+ELIMINAR_FINAL EN miLista;
+ELIMINAR_INICIO EN miLista;
+
+// ============================================================
+// 5. ESTRUCTURA: TABLA HASH
+// ============================================================
+
+CREAR TABLA_HASH miHash;
+
+INSERTAR 101 1000 EN miHash;
+INSERTAR 102 2000 EN miHash;
+INSERTAR 103 3000 EN miHash;
+
+BUSCAR 102 EN miHash;
+
+ACTUALIZAR 102 2500 EN miHash;
+
+// ============================================================
+// 6. ESTRUCTURA: GRAFO
+// ============================================================
+
+CREAR GRAFO miGrafo;
+
+AGREGARNODO 1 100 EN miGrafo;
+AGREGARNODO 2 200 EN miGrafo;
+AGREGARNODO 3 300 EN miGrafo;
+AGREGARNODO 4 400 EN miGrafo;
+
+AGREGARARISTA 1 2 EN miGrafo;
+AGREGARARISTA 2 3 EN miGrafo;
+AGREGARARISTA 3 4 EN miGrafo;
+AGREGARARISTA 1 4 EN miGrafo;
+
+// ============================================================
+// 7. CONTROL DE FLUJO: IF
+// ============================================================
+
+CREAR NUMERO a = 50;
+CREAR NUMERO b = 30;
+
+IF (a > b) {
+    MOSTRAR 1;
+}
+
+IF (a == b) {
+    MOSTRAR 0;
+}
+
+// ============================================================
+// 8. BUCLES: WHILE
+// ============================================================
+
+CREAR NUMERO contador = 0;
+
+WHILE (contador < 5) {
+    MOSTRAR contador;
+    contador = contador + 1;
+}
+
+// ============================================================
+// 9. BUCLES: FOR
+// ============================================================
+
+CREAR NUMERO i = 0;
+
+FOR (i = 0; i < 10; i = i + 1) {
+    MOSTRAR i;
+}
+
+// ============================================================
+// 10. BUCLES: DO-WHILE
+// ============================================================
+
+CREAR NUMERO j = 0;
+
+DO {
+    MOSTRAR j;
+    j = j + 1;
+} WHILE (j < 3)
+
+// ============================================================
+// 11. PROPIEDADES DE ESTRUCTURAS
+// ============================================================
+
+CREAR PILA pila2 TAMANO 50;
+
+APILAR 99 EN pila2;
+
+CREAR NUMERO temp = 0;
+temp = TOPE EN pila2;
+MOSTRAR temp;
+
+IF (VACIA EN pila2) {
+    MOSTRAR 0;
+}
+
+// ============================================================
+// 12. TEXTO Y CADENAS
+// ============================================================
+
+CREAR TEXTO mensaje = "Hola Mundo";
+CREAR TEXTO saludo = "Compilador DSL";
+
+MOSTRAR mensaje;
+MOSTRAR saludo;
+
+// ============================================================
+// 13. OPERACIONES COMPLEJAS
+// ============================================================
+
+CREAR NUMERO num1 = 5;
+CREAR NUMERO num2 = 3;
+CREAR NUMERO num3 = 2;
+
+CREAR NUMERO calc = 0;
+calc = (num1 + num2) * num3;
+MOSTRAR calc;
+
+calc = num1 * num2 + num3;
+MOSTRAR calc;
+
+// ============================================================
+// 14. ÁRBOL BINARIO
+// ============================================================
+
+CREAR ARBOL_BINARIO arbol;
+
+AGREGARNODO 1 50 EN arbol;
+AGREGARNODO 1 30 EN arbol;
+AGREGARNODO 1 70 EN arbol;
+AGREGARNODO 1 20 EN arbol;
+AGREGARNODO 1 40 EN arbol;
+
+// ============================================================
+// 15. ESTRUCTURA BICOLA (DOUBLE-ENDED QUEUE)
+// ============================================================
+
+CREAR BICOLA mibicola TAMANO 30;
+
+ENCOLAR 10 EN mibicola;
+ENCOLAR 20 EN mibicola;
+ENCOLAR 30 EN mibicola;
+
+// ============================================================
+// FIN DEL EJEMPLO
+// ============================================================
+
+MOSTRAR 999;
