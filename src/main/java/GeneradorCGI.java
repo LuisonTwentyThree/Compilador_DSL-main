@@ -263,6 +263,9 @@ public class GeneradorCGI {
     /**
      * Procesa operaciones sobre estructuras de datos
      * Ej: APILAR, INSERTAR, ELIMINAR, etc.
+     * 
+     * Para DESENCOLAR y DESAPILAR, verifica que la estructura no esté vacía
+     * Para INSERTAR en listas enlazadas y árboles binarios, requiere CLAVE y VALOR
      */
     private String procesarOperacionEstructura(NodoAST nodo, String operacion) {
         if (nodo.getHijos() == null || nodo.getHijos().isEmpty()) {
@@ -299,16 +302,31 @@ public class GeneradorCGI {
             return ""; // No encontramos estructura
         }
 
+        // Validar operaciones que requieren exactamente 2 argumentos
+        if ((operUpper.equals("INSERTAR") || operUpper.equals("AGREGARNODO")) && idxEstructura < 2) {
+            agregar("ERROR", "Se requieren CLAVE y VALOR para", operUpper, idEstructura);
+            return "";
+        }
+
         // Procesamos según el número de argumentos
         if (idxEstructura == 0) {
             // Solo la estructura (DESAPILAR EN pila, DESENCOLAR EN cola)
+            // Para operaciones que extraen datos, verificar que no esté vacía
+            if (operUpper.equals("DESAPILAR") || operUpper.equals("DESENCOLAR")) {
+                String tVerificacion = nuevoTemporal();
+                agregar("VACIA", idEstructura, "", tVerificacion);
+                String lContinuar = nuevaEtiqueta();
+                agregar("IF_FALSE", tVerificacion, "GOTO", lContinuar);
+                agregar("ERROR", "Estructura vacía", "", "");
+                agregar("ETIQUETA", "", "", lContinuar);
+            }
             agregar(operUpper, "", "", idEstructura);
         } else if (idxEstructura == 1) {
             // Un argumento + estructura (APILAR 5 EN pila, ELIMINAR_FINAL EN lista)
             String arg1 = recorrerNodo(nodo.getHijos().get(0));
             agregar(operUpper, arg1, "", idEstructura);
         } else if (idxEstructura >= 2) {
-            // Dos o más argumentos + estructura (AGREGARNODO 1 25 EN arbol)
+            // Dos o más argumentos + estructura (INSERTAR clave valor EN lista, AGREGARNODO clave valor EN arbol)
             String arg1 = recorrerNodo(nodo.getHijos().get(0));
             String arg2 = recorrerNodo(nodo.getHijos().get(1));
             agregar(operUpper, arg1, arg2, idEstructura);

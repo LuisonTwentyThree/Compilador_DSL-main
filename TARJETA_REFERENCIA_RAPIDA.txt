@@ -1,0 +1,245 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                         TARJETA DE REFERENCIA RÁPIDA                        ║
+║                    Generador ASM con Visualización de Árboles                ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+─────────────────────────────────────────────────────────────────────────────
+CLASES PRINCIPALES
+─────────────────────────────────────────────────────────────────────────────
+
+GeneradorEnsamblador
+├─ procesarCuadruplos(List<Cuadruplo>)
+├─ traducirCuadruplo(Cuadruplo)
+└─ obtenerCodigoEnsamblador(): String
+
+VisualizadorArboles
+├─ insertar(NodoABB, clave, valor): NodoABB
+├─ eliminar(NodoABB, clave): NodoABB
+├─ buscar(NodoABB, clave): NodoABB
+├─ dibujarArbol(NodoABB): String
+└─ dibujarPorNiveles(NodoABB): String
+
+IntegradorSalidaASM
+├─ procesarInsertar(clave, valor)
+├─ procesarEliminar(clave)
+├─ procesarBuscar(clave)
+├─ generarArchivoASM()
+└─ generarArchivoVisualizacion()
+
+─────────────────────────────────────────────────────────────────────────────
+USO BÁSICO
+─────────────────────────────────────────────────────────────────────────────
+
+// Opción 1: Generador ASM
+GeneradorEnsamblador gen = new GeneradorEnsamblador();
+gen.procesarCuadruplos(listaCuadruplos);
+System.out.println(gen.obtenerCodigoEnsamblador());
+
+// Opción 2: Visualizador Árboles
+VisualizadorArboles.NodoABB arbol = null;
+arbol = VisualizadorArboles.insertar(arbol, 50, "raiz");
+System.out.println(VisualizadorArboles.dibujarArbol(arbol));
+
+// Opción 3: Integrador Completo
+IntegradorSalidaASM integrador = new IntegradorSalidaASM("salida");
+integrador.procesarInsertar(50, "raiz");
+integrador.generarArchivosCompletos();
+
+─────────────────────────────────────────────────────────────────────────────
+OPERACIONES EN ENSAMBLADOR
+─────────────────────────────────────────────────────────────────────────────
+
+Matemáticas:           Árboles:               Control:
+  +  (ADD)              AGREGARNODO            IF_FALSE
+  -  (SUB)              ELIMINAR               GOTO
+  *  (IMUL)             BUSCAR                 ETIQUETA
+  /  (IDIV)             DIBUJAR_ARBOL
+
+Pilas:                 Colas:                 Listas:
+  APILAR                ENCOLAR                INSERTAR
+  DESAPILAR             DESENCOLAR             ELIMINAR
+  TOPE                  FRENTE                 VACIA
+  
+─────────────────────────────────────────────────────────────────────────────
+MÉTODOS RECICLADOS DE VISUALIZADOR
+─────────────────────────────────────────────────────────────────────────────
+
+Inserción:
+  arbol = VisualizadorArboles.insertar(arbol, 50, "valor");
+
+Eliminación:
+  arbol = VisualizadorArboles.eliminar(arbol, 50);
+
+Búsqueda:
+  NodoABB resultado = VisualizadorArboles.buscar(arbol, 50);
+
+Dibujar:
+  System.out.println(VisualizadorArboles.dibujarArbol(arbol));
+
+Recorridos:
+  VisualizadorArboles.recorridoPreorden(arbol)
+  VisualizadorArboles.recorridoInorden(arbol)
+  VisualizadorArboles.recorridoPostorden(arbol)
+  VisualizadorArboles.dibujarPorNiveles(arbol)
+
+Estadísticas:
+  VisualizadorArboles.obtenerAltura(arbol)
+  VisualizadorArboles.obtenerBalance(arbol)
+  VisualizadorArboles.contarNodos(arbol)
+  VisualizadorArboles.contarHojas(arbol)
+
+─────────────────────────────────────────────────────────────────────────────
+ARCHIVOS GENERADOS
+─────────────────────────────────────────────────────────────────────────────
+
+salida_dsl.asm
+├─ Código ensamblador x86-64
+├─ Instrucciones reales del procesador
+├─ Rutinas de visualización
+└─ Ejecutable con nasm/gcc
+
+salida_dsl_visualizacion.txt
+├─ Cuádruplos generados
+├─ Diagramas ASCII de árboles
+├─ Recorridos (Pre/In/Post)
+├─ Vista por niveles (BFS)
+└─ Estadísticas
+
+─────────────────────────────────────────────────────────────────────────────
+COMPILACIÓN Y EJECUCIÓN
+─────────────────────────────────────────────────────────────────────────────
+
+Compilar Java:
+  $ javac GeneradorEnsamblador.java
+  $ javac VisualizadorArboles.java
+  $ javac IntegradorSalidaASM.java
+  $ javac EjemploGeneracionASM.java
+
+Ejecutar ejemplo:
+  $ java EjemploGeneracionASM
+
+Ensamblar (NASM):
+  $ nasm -f elf64 salida_dsl.asm -o salida_dsl.o
+  $ ld salida_dsl.o -o programa
+  $ ./programa
+
+Ensamblar (GCC):
+  $ nasm -f elf64 salida_dsl.asm -o salida_dsl.o
+  $ gcc -no-pie salida_dsl.o -o programa
+  $ ./programa
+
+─────────────────────────────────────────────────────────────────────────────
+VALIDACIONES AUTOMÁTICAS
+─────────────────────────────────────────────────────────────────────────────
+
+✓ DESENCOLAR/DESAPILAR verifican estructura vacía
+✓ INSERTAR/AGREGARNODO verifican presencia de CLAVE y VALOR
+✓ Cálculo automático de altura y balance
+✓ Detección de desequilibrio (⚠ IZQUIERDO/DERECHO)
+✓ Manejo de errores de estructura vacía
+
+─────────────────────────────────────────────────────────────────────────────
+EJEMPLO COMPLETO
+─────────────────────────────────────────────────────────────────────────────
+
+IntegradorSalidaASM integrador = new IntegradorSalidaASM("salida");
+
+// Procesamiento
+integrador.procesarInsertar(50, "raiz");
+integrador.procesarInsertar(30, "izq");
+integrador.procesarInsertar(70, "der");
+integrador.procesarBuscar(30);
+integrador.procesarEliminar(20);
+
+// Generación
+integrador.generarArchivosCompletos();
+integrador.imprimirResumen();
+
+Resultado:
+  ✓ salida.asm (código ensamblador)
+  ✓ salida_visualizacion.txt (reporte visual)
+
+─────────────────────────────────────────────────────────────────────────────
+ESTRUCTURA DEL ÁRBOL VISUAL
+─────────────────────────────────────────────────────────────────────────────
+
+   ├── [50 : Raíz] h=3
+   │   ├── [30 : Izquierda] h=2
+   │   │   ├── [20 : Sub-izq] h=1
+   │   │   └── [40 : Sub-der-izq] h=1
+   │   └── [70 : Derecha] h=1
+
+Significado:
+  ├──   Nodo con hermano a la derecha
+  └──   Último nodo en esta rama
+  │    Continuación vertical
+  h=N  Altura del nodo
+
+─────────────────────────────────────────────────────────────────────────────
+ESTADÍSTICAS DEL ÁRBOL
+─────────────────────────────────────────────────────────────────────────────
+
+Altura:          Profundidad máxima desde raíz
+Balance:         altura_izq - altura_der
+                   0:   Balanceado
+                  >1:   ⚠ Desbalanceado izquierda
+                  <-1:  ⚠ Desbalanceado derecha
+
+Total Nodos:     Cantidad total de nodos
+Nodos Hoja:      Nodos sin hijos
+
+─────────────────────────────────────────────────────────────────────────────
+RECORRIDOS
+─────────────────────────────────────────────────────────────────────────────
+
+Preorden (Pre-order):
+  Proceso: Raíz → Izquierda → Derecha
+  Ej: 50 30 20 40 70
+  Uso: Copiar árbol, pre-procesamiento
+
+Inorden (In-order):
+  Proceso: Izquierda → Raíz → Derecha
+  Ej: 20 30 40 50 70
+  Uso: Obtener valores ordenados (ABB)
+
+Postorden (Post-order):
+  Proceso: Izquierda → Derecha → Raíz
+  Ej: 20 40 30 70 50
+  Uso: Eliminar árbol, post-procesamiento
+
+Por Niveles (BFS):
+  Proceso: Cada nivel en orden
+  Ej: Nivel 0: 50 | Nivel 1: 30 70 | Nivel 2: 20 40
+  Uso: Búsqueda por amplitud, visualización
+
+─────────────────────────────────────────────────────────────────────────────
+TIPS Y TRUCOS
+─────────────────────────────────────────────────────────────────────────────
+
+• Usar inorden para verificar que el ABB está ordenado
+• Usar preorden para procesar antes de recursión
+• Usar postorden para eliminar el árbol
+• Usar BFS para visualización nivel por nivel
+• Monitorear balance para detectar degradación
+• El inorden de un ABB siempre está ordenado
+
+─────────────────────────────────────────────────────────────────────────────
+INTEGRACIÓN EN COMPILADOR
+─────────────────────────────────────────────────────────────────────────────
+
+En Compilador.java:
+
+1. Crear instancia:
+   IntegradorSalidaASM integrador = new IntegradorSalidaASM("nombre");
+
+2. Después de generar cuádruplos:
+   integrador.procesarTodos();
+
+3. Generar archivos:
+   integrador.generarArchivosCompletos();
+
+Ver GUIA_INTEGRACION_ASM.java para detalles completos.
+
+═════════════════════════════════════════════════════════════════════════════
+
+Versión: 1.0 | Referencia Rápida | Abril 2026

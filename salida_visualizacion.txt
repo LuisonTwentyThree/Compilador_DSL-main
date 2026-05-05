@@ -1,0 +1,46 @@
+╔════════════════════════════════════════════════════════════════════╗
+║          REPORTE DE EJECUCIÓN - DSL COMPILADOR                    ║
+║          Visualización de Estructuras de Datos                    ║
+╚════════════════════════════════════════════════════════════════════╝
+
+CUÁDRUPLOS GENERADOS:
+──────────────────────────────────────────────────────────────────────
+
+══════════════════════════════════════════════════════════════════════
+
+ESTADO FINAL DEL ÁRBOL BINARIO:
+
+╔════════════════════════════════════════╗
+║     ÁRBOL BINARIO DE BÚSQUEDA          ║
+╚════════════════════════════════════════╝
+
+└── [50 : NODO50] h=3
+    ├── [30 : NODO30] h=2
+    │   ├── [NULL]
+    │   └── [40 : NODO40] h=1
+    └── [70 : NODO70] h=2
+        ├── [60 : NODO60] h=1
+        └── [80 : NODO80] h=1
+
+┌─ Estadísticas del Árbol ─────────────┐
+│ Altura: 3
+│ Balance Raíz: 0
+│ Total de Nodos: 6
+│ Nodos Hoja: 3
+└──────────────────────────────────────┘
+
+RECORRIDOS DEL ÁRBOL:
+Preorden: 50 30 40 70 60 80 
+Inorden: 30 40 50 60 70 80 
+Postorden: 40 30 60 80 70 50 
+
+VISTA POR NIVELES:
+
+╔════════════════════════════════╗
+║  VISTA POR NIVELES              ║
+╚════════════════════════════════╝
+
+Nivel 0: [50:NODO50] 
+Nivel 1: [30:NODO30] [70:NODO70] 
+Nivel 2: [40:NODO40] [60:NODO60] [80:NODO80] 
+
