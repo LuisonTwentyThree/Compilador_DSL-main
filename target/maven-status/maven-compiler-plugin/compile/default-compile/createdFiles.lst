@@ -8,6 +8,7 @@ TablaSimbolos$SimboloHash.class
 AnalizadorSemantico.class
 EjemploGeneracionASM.class
 TablaErrores$ErrorDetalle.class
+PruebaGenerador.class
 GeneradorEnsamblador.class
 Compilador$2.class
 MotorLexico.class

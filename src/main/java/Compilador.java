@@ -784,5 +784,6 @@ public class Compilador extends JFrame {
             ex.printStackTrace();
         }
         SwingUtilities.invokeLater(() -> new Compilador().setVisible(true));
+        
     }
 }
