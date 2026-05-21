@@ -5,6 +5,47 @@
 
 CUÁDRUPLOS GENERADOS:
 ──────────────────────────────────────────────────────────────────────
+  0: ALLOC           100                  PILA                 -> miPila
+  1: APILAR          10                                        -> miPila
+  2: APILAR          20                                        -> miPila
+  3: APILAR          30                                        -> miPila
+  4: TOPE            miPila                                    -> T1
+  5: PRINT           T1                                        -> 
+  6: VACIA           miPila                                    -> T2
+  7: IF_FALSE        T2                   GOTO                 -> L1
+  8: ERROR           Estructura vacía                          -> 
+  9: ETIQUETA                                                  -> L1
+ 10: DESAPILAR                                                 -> miPila
+ 11: TOPE            miPila                                    -> T3
+ 12: PRINT           T3                                        -> 
+ 13: VACIA           miPila                                    -> T4
+ 14: IF_FALSE        T4                   GOTO                 -> L2
+ 15: ERROR           Estructura vacía                          -> 
+ 16: ETIQUETA                                                  -> L2
+ 17: DESAPILAR                                                 -> miPila
+ 18: TOPE            miPila                                    -> T5
+ 19: PRINT           T5                                        -> 
+ 20: ALLOC           50                   COLA                 -> miCola
+ 21: ENCOLAR         100                                       -> miCola
+ 22: ENCOLAR         200                                       -> miCola
+ 23: ENCOLAR         300                                       -> miCola
+ 24: FRENTE          miCola                                    -> T6
+ 25: PRINT           T6                                        -> 
+ 26: VACIA           miCola                                    -> T7
+ 27: IF_FALSE        T7                   GOTO                 -> L3
+ 28: ERROR           Estructura vacía                          -> 
+ 29: ETIQUETA                                                  -> L3
+ 30: DESENCOLAR                                                -> miCola
+ 31: FRENTE          miCola                                    -> T8
+ 32: PRINT           T8                                        -> 
+ 33: ALLOC           100                  LISTA_ENLAZADA       -> miLista
+ 34: INSERTAR_FINAL  5                                         -> miLista
+ 35: INSERTAR_FINAL  10                                        -> miLista
+ 36: INSERTAR_FINAL  15                                        -> miLista
+ 37: INSERTAR_INICIO 1                                         -> miLista
+ 38: TAMANO          miLista                                   -> T9
+ 39: PRINT           T9                                        -> 
+ 40: PRINT           999                                       -> 
 
 ══════════════════════════════════════════════════════════════════════
 
@@ -14,33 +55,12 @@ ESTADO FINAL DEL ÁRBOL BINARIO:
 ║     ÁRBOL BINARIO DE BÚSQUEDA          ║
 ╚════════════════════════════════════════╝
 
-└── [50 : NODO50] h=3
-    ├── [30 : NODO30] h=2
-    │   ├── [NULL]
-    │   └── [40 : NODO40] h=1
-    └── [70 : NODO70] h=2
-        ├── [60 : NODO60] h=1
-        └── [80 : NODO80] h=1
-
-┌─ Estadísticas del Árbol ─────────────┐
-│ Altura: 3
-│ Balance Raíz: 0
-│ Total de Nodos: 6
-│ Nodos Hoja: 3
-└──────────────────────────────────────┘
+   [ ÁRBOL VACÍO ]
 
 RECORRIDOS DEL ÁRBOL:
-Preorden: 50 30 40 70 60 80 
-Inorden: 30 40 50 60 70 80 
-Postorden: 40 30 60 80 70 50 
+Preorden: 
+Inorden: 
+Postorden: 
 
 VISTA POR NIVELES:
-
-╔════════════════════════════════╗
-║  VISTA POR NIVELES              ║
-╚════════════════════════════════╝
-
-Nivel 0: [50:NODO50] 
-Nivel 1: [30:NODO30] [70:NODO70] 
-Nivel 2: [40:NODO40] [60:NODO60] [80:NODO80] 
-
+[ ÁRBOL VACÍO ]

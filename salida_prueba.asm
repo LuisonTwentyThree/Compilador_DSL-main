@@ -1,122 +1,74 @@
 ; ============================================
 ; CÓDIGO ENSAMBLADOR GENERADO - DSL
-; Con Optimización y Visualización de Estructuras
-; Arquitectura: x86-64 (System V AMD64 ABI)
+; Compilado para Arquitectura: Intel 8086
+; Modo: Real Mode (DOS/BIOS compatible)
+; Registros de 16 bits: AX, BX, CX, DX, SI, DI
+; Segmentación: CS, DS, ES, SS
 ; ============================================
 
-section .data
-    titulo db 'EJECUCION DE PROGRAMA DSL', 0
-    newline db 10, 0
-    espacio db ' ', 0
-    arbolVacio db 'Arbol vacio', 10, 0
+.model small
+.stack 100h
 
-section .text
-    global main
-    extern printf
+.data
+    titulo db ''EJECUCION DE PROGRAMA DSL'', 0Dh, 0Ah, ''$''
+    newline db 0Dh, 0Ah, ''$''
+    espacio db '' '', ''$''
+    arbolVacio db ''Arbol vacio'', 0Dh, 0Ah, ''$''
 
-main:
-    push rbp
-    mov rsp, rbp
+.code
+main proc
+    mov ax, @data
+    mov ds, ax
+    mov es, ax
+    mov dx, offset titulo
+    call print_string
 
     ; *** ASIGNACIÓN: a = 5
-    mov [a], 5
+    mov ax, 5
+    mov [a], ax
     ; *** ASIGNACIÓN: b = 3
-    mov [b], 3
+    mov ax, 3
+    mov [b], ax
     ; *** OPERACIÓN MATEMÁTICA: c = a + b
-    mov rax, [a]  ; Cargar primer operando
-    mov rbx, [b]  ; Cargar segundo operando
-    add rax, rbx            ; Suma
-    mov [c], rax      ; Guardar resultado
+    mov ax, [a]
+    mov bx, [b]
+    add ax, bx
+    mov [c], ax
     ; *** PRINT: c
-    mov rdi, [c]
-    call printf
+    mov ax, [c]
+    mov dl, al
+    mov ah, 02h
+    int 21h
     ; *** IF_FALSE c GOTO fin
-    cmp [c], 0   ; Comparar condición con 0
-    je fin          ; Saltar si es cero (falso)
+    mov ax, [c]
+    cmp ax, 0
+    je fin
     ; *** APILAR c EN pila1
-    mov rax, [c]
+    mov ax, [c]
     call apilar_pila1
 fin:
     jmp salida
 
 ; ============================================
-; SECCIÓN: RUTINAS DE VISUALIZACIÓN DE ÁRBOLES
+; SECCIÓN: RUTINAS AUXILIARES
 ; ============================================
 
-dibujar_arbol:
-    push rbp
-    mov rbp, rsp
-    
-    ; Inicializar visualización
-    mov rdi, newline
-    call printf
-    
-    ; Llamar a función recursiva de dibujo
-    mov rax, [raiz_arbol]
-    mov rcx, 0              ; profundidad inicial = 0
-    call dibujar_nodo_rec
-    
-    mov rdi, newline
-    call printf
-    pop rbp
+print_string proc
+    mov ah, 09h
+    int 21h
     ret
+print_string endp
 
-dibujar_nodo_rec:
-    push rbp
-    mov rbp, rsp
-    
-    ; PARÁMETROS:
-    ;   RAX = puntero al nodo actual
-    ;   RCX = profundidad (indentación)
-    
-    ; BASE: Si nodo es NULL, retornar
-    test rax, rax
-    jz .fin_nodo
-    
-    ; Imprimir indentación (espacios según profundidad)
-    push rcx
-    mov r8, rcx
-.loop_indent:
-    test r8, r8
-    jz .fin_indent
-    mov rdi, espacio
-    call printf
-    dec r8
-    jmp .loop_indent
-.fin_indent:
-    pop rcx
-    
-    ; Imprimir nodo actual [clave:valor]
-    mov rdi, formato_nodo
-    mov rsi, [rax + 0]      ; campo: clave
-    mov rdx, [rax + 8]      ; campo: valor
-    call printf
-    
-    ; RECURSIÓN IZQUIERDA
-    mov rax, [rax + 16]     ; carga hijo izquierdo
-    inc rcx                 ; aumentar profundidad
-    call dibujar_nodo_rec
-    dec rcx
-    
-    ; RECURSIÓN DERECHA
-    mov rax, [rbp + 16]     ; recuperar nodo original del stack
-    mov rax, [rax + 24]     ; carga hijo derecho
-    inc rcx
-    call dibujar_nodo_rec
-    
-.fin_nodo:
-    pop rbp
-    ret
 
-section .data
-    formato_nodo db '[%d:%d] ', 0     ; Formato para nodo del árbol
-    formato_error db 'ERROR: Estructura vacia', 10, 0
-    msg_error db 'Error en la operacion', 10, 0
+; Datos adicionales
+    msg_error db ''Error en la operacion'', 0Dh, 0Ah, ''$''
 
 ; ============================================
 ; SECCIÓN: FIN DEL PROGRAMA
 ; ============================================
 
-    mov rax, 60             ; Número syscall para exit
-    mov rdi, 0              ; Código de salida (0 = éxito)
-    syscall                 ; Realizar syscall
+    mov ax, 4C00h
+    int 21h
+
+main endp
+end main
