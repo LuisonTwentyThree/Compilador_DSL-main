@@ -1,3 +1,5 @@
+//hola
+
 package compilador.codegen.asm;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -16,6 +18,8 @@ import compilador.core.Cuadruplo;
  * no existen todavia.
  */
 public class GeneradorEnsamblador {
+    // Backend ASM normal: convierte cuadruplos en un programa 8086/MASM para DOS.
+    // Esta salida imprime en consola y modela las estructuras en memoria.
     private List<String> codigoEnsamblador;
     private final Map<String, NodoArbol> arboles;
     private final Map<String, String> cacheRegistros;
@@ -62,6 +66,8 @@ public class GeneradorEnsamblador {
         }
     }
     private void agregarEncabezado() {
+        // Se emite primero la estructura basica del programa ASM. Mas adelante,
+        // obtenerCodigoEnsamblador() inserta variables y estructuras en .data.
         emitir("; ============================================");
         emitir("; CODIGO ENSAMBLADOR GENERADO - DSL");
         emitir("; Arquitectura objetivo: Intel 8086 / DOS");
@@ -85,6 +91,8 @@ public class GeneradorEnsamblador {
     }
 
     public void traducirCuadruplo(Cuadruplo c) {
+        // Cada cuadruplo representa una instruccion intermedia. Este switch
+        // decide que rutina ASM se debe emitir segun el operador.
         if (c == null || c.operador == null) {
             return;
         }
@@ -206,6 +214,8 @@ public class GeneradorEnsamblador {
     }
 
     private void traducirAsignacion(String valor, String variable) {
+        // Traduce asignaciones simples: variable = valor. Si el valor es texto,
+        // se guarda para declararlo como cadena en la seccion .data.
         if (!esIdentificador(variable)) {
             return;
         }
@@ -224,6 +234,8 @@ public class GeneradorEnsamblador {
     }
 
     private void traducirOperacionMatematica(String op, String arg1, String arg2, String res) {
+        // En 8086 se usan registros para operar: AX carga el primer operando,
+        // BX el segundo, y el resultado se guarda en la variable destino.
         registrarVariable(res);
         emitir("    ; " + res + " = " + arg1 + " " + op + " " + arg2);
         cargarAX(arg1);
@@ -267,6 +279,8 @@ public class GeneradorEnsamblador {
     }
 
     private void traducirPrint(String valor) {
+        // PRINT/MOSTRAR genera llamadas a rutinas auxiliares de impresion.
+        // El valor puede ser literal, variable numerica o cadena declarada.
         emitir("    ; PRINT " + valor);
         if (valor == null || valor.isEmpty()) {
             emitir("    ; PRINT omitido: expresion vacia");
@@ -288,6 +302,8 @@ public class GeneradorEnsamblador {
     }
 
     private void traducirAlloc(String tamano, String tipo, String variable) {
+        // ALLOC no reserva memoria dinamica real para todo: registra metadatos
+        // para que obtenerCodigoEnsamblador() declare arreglos/campos en .data.
         if (!esIdentificador(variable)) {
             return;
         }
@@ -499,6 +515,7 @@ public class GeneradorEnsamblador {
     private void traducirInsertarLista(String op, String valor, String lista) {
         String lAppend = nuevaEtiquetaInterna();
         String lFin = nuevaEtiquetaInterna();
+        String lNoVacia = nuevaEtiquetaInterna();
 
         emitir("    ; " + op + " " + valor + " EN " + lista + " (nodo HEAP: valor, sig)");
         cargarAX(valor);
@@ -506,6 +523,18 @@ public class GeneradorEnsamblador {
         emitir("    add word ptr [HEAP_PTR], 4");
         emitir("    mov HEAP[si], ax");
         emitir("    mov word ptr HEAP[si+2], 0");
+        if ("INSERTAR_INICIO".equals(op)) {
+            emitir("    cmp word ptr [" + lista + "_head], 0");
+            emitir("    jne " + lNoVacia);
+            emitir("    mov [" + lista + "_head], si");
+            emitir("    mov [" + lista + "_tail], si");
+            emitir("    jmp " + lFin);
+            emitir(lNoVacia + ":");
+            emitir("    mov bx, [" + lista + "_head]");
+            emitir("    mov HEAP[si+2], bx");
+            emitir("    mov [" + lista + "_head], si");
+            emitir("    jmp " + lFin);
+        }
         emitir("    cmp word ptr [" + lista + "_head], 0");
         emitir("    jne " + lAppend);
         emitir("    mov [" + lista + "_head], si");
@@ -516,6 +545,7 @@ public class GeneradorEnsamblador {
         emitir("    mov HEAP[bx+2], si");
         emitir("    mov [" + lista + "_tail], si");
         emitir(lFin + ":");
+        emitir("    inc word ptr [" + lista + "_count]");
     }
 
     private void traducirEliminarLista(String op, String lista) {
@@ -542,10 +572,12 @@ public class GeneradorEnsamblador {
             emitir(lEncontrado + ":");
             emitir("    mov word ptr HEAP[bx+2], 0");
             emitir("    mov [" + lista + "_tail], bx");
+            emitir("    dec word ptr [" + lista + "_count]");
             emitir("    jmp " + lFin);
             emitir(lUnico + ":");
             emitir("    mov word ptr [" + lista + "_head], 0");
             emitir("    mov word ptr [" + lista + "_tail], 0");
+            emitir("    dec word ptr [" + lista + "_count]");
             emitir(lFin + ":");
             return;
         }
@@ -558,6 +590,7 @@ public class GeneradorEnsamblador {
         emitir("    mov bx, [" + lista + "_head]");
         emitir("    mov ax, HEAP[bx+2]");
         emitir("    mov [" + lista + "_head], ax");
+        emitir("    dec word ptr [" + lista + "_count]");
         emitir("    cmp ax, 0");
         emitir("    jne " + lFin);
         emitir("    mov word ptr [" + lista + "_tail], 0");
@@ -1030,6 +1063,8 @@ public class GeneradorEnsamblador {
     }
 
     private void cargarAX(String valor) {
+        // Utilidad comun: carga un literal o variable en AX. Muchas rutinas
+        // empiezan por aqui porque AX es el acumulador principal del 8086.
         if (esNumero(valor)) {
             emitir("    mov ax, " + valor);
         } else if (esIdentificador(valor)) {
@@ -1145,6 +1180,8 @@ public class GeneradorEnsamblador {
     }
 
     private void emitir(String linea) {
+        // Todas las rutinas agregan texto ASM aqui. La lista se ensambla al
+        // final en obtenerCodigoEnsamblador().
         codigoEnsamblador.add(linea);
     }
 
@@ -1270,6 +1307,8 @@ public class GeneradorEnsamblador {
     }
 
     public String obtenerCodigoEnsamblador() {
+        // Construye el archivo final. En este punto ya sabemos que variables,
+        // textos y estructuras se usaron, por eso se insertan dentro de .data.
         StringBuilder sb = new StringBuilder();
         for (String linea : codigoEnsamblador) {
             if (".code".equals(linea)) {
@@ -1305,6 +1344,7 @@ public class GeneradorEnsamblador {
                     } else if ("LISTA".equals(tipo)) {
                         sb.append("    ").append(nombre).append("_head dw 0\n");
                         sb.append("    ").append(nombre).append("_tail dw 0\n");
+                        sb.append("    ").append(nombre).append("_count dw 0\n");
                     } else if ("ARBOL".equals(tipo)) {
                         sb.append("    ").append(nombre).append("_root dw 0\n");
                     } else if ("GRAFO".equals(tipo)) {
@@ -1339,6 +1379,8 @@ public class GeneradorEnsamblador {
         System.out.println(obtenerVisualizacion());
     }
     public void procesarCuadruplos(List<Cuadruplo> cuadruplos) {
+        // Flujo principal del backend: traduce cada cuadruplo, cierra el
+        // programa, agrega rutinas auxiliares y opcionalmente optimiza el texto ASM.
         for (Cuadruplo c : cuadruplos) {
             traducirCuadruplo(c);
         }

@@ -280,10 +280,10 @@ public class AnalizadorSintactico {
             nodoOp.agregarHijo(expresion()); // origen
             nodoOp.agregarHijo(expresion()); // destino
         } // =====================================
-        // INSERTAR clave valor EN tabla_hash
+        // INSERTAR/ACTUALIZAR clave valor EN tabla_hash
         // SOLO NUMEROS
         // =====================================
-        else if (verbo.equals("INSERTAR")) {
+        else if (verbo.equals("INSERTAR") || verbo.equals("ACTUALIZAR")) {
 
             NodoAST clave = expresion();
 
@@ -294,7 +294,7 @@ public class AnalizadorSintactico {
             nodoOp.agregarHijo(clave);
 
             if (checar("EN")) {
-                throw error("Falta el valor para insertar.", 205);
+                throw error("Falta el valor para " + verbo.toLowerCase() + ".", 205);
             }
 
             NodoAST valor = expresion();

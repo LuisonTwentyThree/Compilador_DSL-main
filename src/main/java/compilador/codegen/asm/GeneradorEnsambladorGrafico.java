@@ -1,3 +1,4 @@
+//hola
 package compilador.codegen.asm;
 
 import java.util.ArrayList;
@@ -17,24 +18,40 @@ import compilador.core.Cuadruplo;
  * como rectangulos/nodos usando BIOS int 10h.
  */
 public class GeneradorEnsambladorGrafico {
+    // Backend ASM grafico: usa los mismos cuadruplos que el backend normal,
+    // pero genera un programa que entra a modo 13h y dibuja estructuras.
     private final List<String> codigo;
     private final Set<String> variables;
+    private final Set<String> temporalesRecorrido;
+    private final Set<String> temporalesTamano;
+    private final Set<String> temporalesTope;
+    private final Map<String, Integer> temporalesFrenteY;
     private final Map<String, String> estructurasTipo;
     private final Map<String, Integer> estructurasTamano;
     private boolean heapNecesario;
+    private boolean colaNivelesNecesaria;
+    private boolean recorridoGraficoEmitido;
     private int contadorEtiquetas;
 
     public GeneradorEnsambladorGrafico() {
         this.codigo = new ArrayList<>();
         this.variables = new LinkedHashSet<>();
+        this.temporalesRecorrido = new LinkedHashSet<>();
+        this.temporalesTamano = new LinkedHashSet<>();
+        this.temporalesTope = new LinkedHashSet<>();
+        this.temporalesFrenteY = new LinkedHashMap<>();
         this.estructurasTipo = new LinkedHashMap<>();
         this.estructurasTamano = new LinkedHashMap<>();
         this.heapNecesario = false;
+        this.colaNivelesNecesaria = false;
+        this.recorridoGraficoEmitido = false;
         this.contadorEtiquetas = 1;
         agregarEncabezado();
     }
 
     private void agregarEncabezado() {
+        // A diferencia del ASM normal, aqui se inicializa modo grafico 13h
+        // desde el inicio para poder pintar pixeles con BIOS int 10h.
         emitir("; ============================================");
         emitir("; CODIGO ENSAMBLADOR GRAFICO GENERADO - DSL");
         emitir("; Intel 8086 / EMU8086 / MASM - Modo 13h");
@@ -58,6 +75,8 @@ public class GeneradorEnsambladorGrafico {
     }
 
     public void traducirCuadruplo(Cuadruplo c) {
+        // Este switch no intenta cubrir todo el lenguaje con detalle textual;
+        // se enfoca en operaciones que cambian estructuras y por eso requieren redibujo.
         if (c == null || c.operador == null) {
             return;
         }
@@ -85,6 +104,7 @@ public class GeneradorEnsambladorGrafico {
             case "INSERTAR_INICIO":
             case "AGREGARNODO":
             case "AGREGARARISTA":
+            case "ACTUALIZAR":
                 traducirInsercion(op, arg1, arg2, res);
                 break;
             case "DESAPILAR":
@@ -100,6 +120,29 @@ public class GeneradorEnsambladorGrafico {
             case "MOSTRAR":
                 traducirPrint(arg1);
                 break;
+            case "TOPE":
+            case "PEEK":
+                traducirTopePila(op, arg1, res);
+                break;
+            case "FRENTE":
+            case "FRONT":
+                traducirFrenteCola(op, arg1, res);
+                break;
+            case "TAMANO":
+                traducirTamanoEstructura(arg1, res);
+                break;
+            case "BUSCAR":
+                traducirBuscarEstructura(arg1, res);
+                break;
+            case "PREORDEN":
+            case "INORDEN":
+            case "POSTORDEN":
+            case "RECORRIDOPORNIVELES":
+                traducirRecorridoArbol(op, arg1, res);
+                break;
+            case "VECINOS":
+                traducirVecinosGrafo(arg1, arg2, res);
+                break;
             default:
                 emitir("    ; Operacion grafica pendiente: " + op + " " + arg1 + " " + arg2 + " -> " + res);
                 break;
@@ -107,6 +150,8 @@ public class GeneradorEnsambladorGrafico {
     }
 
     public void procesarCuadruplos(List<Cuadruplo> cuadruplos) {
+        // Recibe la misma lista optimizada que el generador ASM normal.
+        // Cada operacion relevante actualiza memoria y llama a GRAFICAR_TODO.
         if (cuadruplos != null) {
             for (Cuadruplo c : cuadruplos) {
                 traducirCuadruplo(c);
@@ -116,6 +161,8 @@ public class GeneradorEnsambladorGrafico {
     }
 
     private void traducirAlloc(String tamano, String tipo, String nombre) {
+        // Registra el tipo y capacidad de cada estructura para luego declarar
+        // sus arreglos en .data y saber que rutina de dibujo necesita.
         if (nombre.isEmpty()) {
             return;
         }
@@ -135,6 +182,8 @@ public class GeneradorEnsambladorGrafico {
     }
 
     private void traducirInsercion(String op, String arg1, String arg2, String estructura) {
+        // Las inserciones modifican el estado interno de la estructura y luego
+        // fuerzan un redibujo completo para reflejar el nuevo estado visual.
         String tipo = estructurasTipo.get(estructura);
         if (tipo == null) {
             registrarVariable(estructura);
@@ -182,7 +231,7 @@ public class GeneradorEnsambladorGrafico {
         }
 
         if ("LISTA".equals(tipo) && op.startsWith("INSERTAR")) {
-            insertarLista(arg2.isEmpty() ? arg1 : arg2, estructura);
+            insertarLista(op, arg2.isEmpty() ? arg1 : arg2, estructura);
             emitir("    call GRAFICAR_TODO");
             return;
         }
@@ -208,22 +257,57 @@ public class GeneradorEnsambladorGrafico {
         if ("HASH".equals(tipo) && "INSERTAR".equals(op)) {
             insertarHash(arg1, arg2, estructura);
             emitir("    call GRAFICAR_TODO");
+            return;
+        }
+
+        if ("HASH".equals(tipo) && "ACTUALIZAR".equals(op)) {
+            actualizarHash(arg1, arg2, estructura);
+            emitir("    call GRAFICAR_TODO");
         }
     }
 
+    private void traducirBuscarEstructura(String clave, String estructura) {
+        String tipo = estructurasTipo.get(estructura);
+        if ("HASH".equals(tipo)) {
+            buscarHash(clave, estructura);
+            return;
+        }
+
+        emitir("    ; Operacion grafica pendiente: BUSCAR " + clave + " EN " + estructura);
+        emitir("    call GRAFICAR_TODO");
+    }
+
     private void traducirEliminacion(String op, String estructura) {
+        // Igual que las inserciones, las eliminaciones actualizan memoria y
+        // despues llaman a GRAFICAR_TODO para refrescar la pantalla.
         String tipo = estructurasTipo.get(estructura);
         if ("PILA".equals(tipo) && ("DESAPILAR".equals(op) || "POP".equals(op))) {
+            String vacia = nuevaEtiqueta();
             String fin = nuevaEtiqueta();
             emitir("    ; DESAPILAR EN " + estructura);
             emitir("    cmp word ptr [" + estructura + "_top], 0");
-            emitir("    je " + fin);
+            emitir("    je " + vacia);
+            emitir("    mov bx, [" + estructura + "_top]");
+            emitir("    dec bx");
+            emitir("    shl bx, 1");
+            emitir("    mov ax, " + estructura + "[bx]");
+            emitir("    mov [gfx_ultimo_desapilado], ax");
             emitir("    dec word ptr [" + estructura + "_top]");
             emitir("    mov bx, [" + estructura + "_top]");
             emitir("    shl bx, 1");
             emitir("    mov word ptr " + estructura + "[bx], 0");
-            emitir(fin + ":");
             emitir("    call GRAFICAR_TODO");
+            emitir("    mov cx, 10");
+            emitir("    mov dx, 82");
+            emitir("    call SET_CURSOR_PIXEL");
+            emitirTextoGrafico("DESAPILAR: ");
+            emitir("    mov ax, [gfx_ultimo_desapilado]");
+            emitir("    call PRINT_NUM_GRAFICO");
+            emitir("    jmp " + fin);
+            emitir(vacia + ":");
+            emitir("    call GRAFICAR_TODO");
+            emitir(fin + ":");
+            recorridoGraficoEmitido = true;
             return;
         }
 
@@ -257,6 +341,7 @@ public class GeneradorEnsambladorGrafico {
             emitir("    mov bx, [" + estructura + "_head]");
             emitir("    mov ax, HEAP[bx+2]");
             emitir("    mov [" + estructura + "_head], ax");
+            emitir("    dec word ptr [" + estructura + "_count]");
             emitir("    cmp ax, 0");
             emitir("    jne " + fin);
             emitir("    mov word ptr [" + estructura + "_tail], 0");
@@ -265,16 +350,29 @@ public class GeneradorEnsambladorGrafico {
         }
     }
 
-    private void insertarLista(String valor, String lista) {
+    private void insertarLista(String op, String valor, String lista) {
         String append = nuevaEtiqueta();
+        String noVacia = nuevaEtiqueta();
         String fin = nuevaEtiqueta();
         heapNecesario = true;
-        emitir("    ; INSERTAR_FINAL " + valor + " EN " + lista);
+        emitir("    ; " + op + " " + valor + " EN " + lista);
         cargarAX(valor);
         emitir("    mov si, [HEAP_PTR]");
         emitir("    add word ptr [HEAP_PTR], 4");
         emitir("    mov HEAP[si], ax");
         emitir("    mov word ptr HEAP[si+2], 0");
+        if ("INSERTAR_INICIO".equals(op)) {
+            emitir("    cmp word ptr [" + lista + "_head], 0");
+            emitir("    jne " + noVacia);
+            emitir("    mov [" + lista + "_head], si");
+            emitir("    mov [" + lista + "_tail], si");
+            emitir("    jmp " + fin);
+            emitir(noVacia + ":");
+            emitir("    mov bx, [" + lista + "_head]");
+            emitir("    mov HEAP[si+2], bx");
+            emitir("    mov [" + lista + "_head], si");
+            emitir("    jmp " + fin);
+        }
         emitir("    cmp word ptr [" + lista + "_head], 0");
         emitir("    jne " + append);
         emitir("    mov [" + lista + "_head], si");
@@ -285,6 +383,7 @@ public class GeneradorEnsambladorGrafico {
         emitir("    mov HEAP[bx+2], si");
         emitir("    mov [" + lista + "_tail], si");
         emitir(fin + ":");
+        emitir("    inc word ptr [" + lista + "_count]");
     }
 
     private void insertarArbol(String valor, String arbol) {
@@ -374,14 +473,269 @@ public class GeneradorEnsambladorGrafico {
         emitir(fin + ":");
     }
 
+    private void actualizarHash(String clave, String valor, String hash) {
+        int cap = estructurasTamano.getOrDefault(hash, 100);
+        String loop = nuevaEtiqueta();
+        String encontrado = nuevaEtiqueta();
+        String insertar = nuevaEtiqueta();
+        String fin = nuevaEtiqueta();
+        emitir("    ; ACTUALIZAR " + clave + " " + valor + " EN " + hash);
+        cargarAX(clave);
+        emitir("    mov [gfx_busqueda], ax");
+        emitir("    mov si, 0");
+        emitir(loop + ":");
+        emitir("    cmp si, [" + hash + "_count]");
+        emitir("    jge " + insertar);
+        emitir("    mov bx, si");
+        emitir("    shl bx, 1");
+        emitir("    mov ax, " + hash + "_keys[bx]");
+        emitir("    cmp ax, [gfx_busqueda]");
+        emitir("    je " + encontrado);
+        emitir("    inc si");
+        emitir("    jmp " + loop);
+        emitir(encontrado + ":");
+        cargarAX(valor);
+        emitir("    mov " + hash + "_values[bx], ax");
+        emitir("    jmp " + fin);
+        emitir(insertar + ":");
+        emitir("    cmp word ptr [" + hash + "_count], " + cap);
+        emitir("    jge " + fin);
+        emitir("    mov bx, [" + hash + "_count]");
+        emitir("    shl bx, 1");
+        emitir("    mov ax, [gfx_busqueda]");
+        emitir("    mov " + hash + "_keys[bx], ax");
+        cargarAX(valor);
+        emitir("    mov " + hash + "_values[bx], ax");
+        emitir("    inc word ptr [" + hash + "_count]");
+        emitir(fin + ":");
+    }
+
+    private void buscarHash(String clave, String hash) {
+        String loop = nuevaEtiqueta();
+        String encontrado = nuevaEtiqueta();
+        String noEncontrado = nuevaEtiqueta();
+        String imprimir = nuevaEtiqueta();
+        emitir("    ; BUSCAR " + clave + " EN " + hash);
+        cargarAX(clave);
+        emitir("    mov [gfx_busqueda], ax");
+        emitir("    mov word ptr [gfx_valor], 0");
+        emitir("    mov si, 0");
+        emitir(loop + ":");
+        emitir("    cmp si, [" + hash + "_count]");
+        emitir("    jge " + noEncontrado);
+        emitir("    mov bx, si");
+        emitir("    shl bx, 1");
+        emitir("    mov ax, " + hash + "_keys[bx]");
+        emitir("    cmp ax, [gfx_busqueda]");
+        emitir("    je " + encontrado);
+        emitir("    inc si");
+        emitir("    jmp " + loop);
+        emitir(encontrado + ":");
+        emitir("    mov ax, " + hash + "_values[bx]");
+        emitir("    mov [gfx_valor], ax");
+        emitir("    jmp " + imprimir);
+        emitir(noEncontrado + ":");
+        emitir("    mov word ptr [gfx_valor], 0");
+        emitir(imprimir + ":");
+        emitir("    mov ax, [gfx_valor]");
+        emitir("    mov [gfx_busqueda_resultado], ax");
+        emitir("    mov word ptr [gfx_busqueda_activa], 1");
+        emitir("    call GRAFICAR_TODO");
+    }
+
     private void traducirPrint(String valor) {
+        // En modo grafico no se usa la consola de texto normal; el numero se
+        // imprime con una rutina grafica propia sobre la pantalla 13h.
+        if (temporalesRecorrido.contains(valor)) {
+            emitir("    ; MOSTRAR " + valor + " omitido: el recorrido ya se imprimio en modo grafico");
+            return;
+        }
         emitir("    ; MOSTRAR " + valor + " en modo grafico");
+        if (temporalesTamano.contains(valor)) {
+            emitir("    mov cx, 10");
+            emitir("    mov dx, 70");
+            emitir("    call SET_CURSOR_PIXEL");
+            emitirTextoGrafico("TAMANO: ");
+        } else if (temporalesTope.contains(valor)) {
+            emitir("    mov cx, 10");
+            emitir("    mov dx, 94");
+            emitir("    call SET_CURSOR_PIXEL");
+            emitirTextoGrafico("TOPE: ");
+        } else if (temporalesFrenteY.containsKey(valor)) {
+            emitir("    call GRAFICAR_TODO");
+            emitir("    mov cx, 70");
+            emitir("    mov dx, " + temporalesFrenteY.get(valor));
+            emitir("    call SET_CURSOR_PIXEL");
+            emitirTextoGrafico("FRENTE: ");
+        }
         cargarAX(valor);
         emitir("    call PRINT_NUM_GRAFICO");
+        recorridoGraficoEmitido = true;
+    }
+
+    private void traducirRecorridoArbol(String op, String arbol, String resultado) {
+        if (!resultado.isEmpty()) {
+            temporalesRecorrido.add(resultado);
+        }
+        recorridoGraficoEmitido = true;
+        if (!"ARBOL".equals(estructurasTipo.get(arbol))) {
+            emitir("    ; " + op + " pendiente: " + arbol + " no es ARBOL");
+            return;
+        }
+
+        int y;
+        String rutina;
+        String etiqueta;
+        if ("PREORDEN".equals(op)) {
+            y = 10;
+            rutina = "PREORDEN";
+            etiqueta = "PREORDEN: ";
+        } else if ("INORDEN".equals(op)) {
+            y = 22;
+            rutina = "INORDEN";
+            etiqueta = "INORDEN: ";
+        } else if ("POSTORDEN".equals(op)) {
+            y = 34;
+            rutina = "POSTORDEN";
+            etiqueta = "POSTORDEN: ";
+        } else {
+            y = 46;
+            rutina = "NIVELES";
+            etiqueta = "NIVELES: ";
+            colaNivelesNecesaria = true;
+        }
+
+        emitir("    ; " + op + " EN " + arbol + " impreso en modo grafico");
+        emitir("    mov cx, 10");
+        emitir("    mov dx, " + y);
+        emitir("    call SET_CURSOR_PIXEL");
+        emitirTextoGrafico(etiqueta);
+        emitir("    mov bx, [" + arbol + "_root]");
+        emitir("    call RECORRIDO_" + rutina + "_" + arbol);
+    }
+
+    private void traducirVecinosGrafo(String nodo, String grafo, String resultado) {
+        if (!resultado.isEmpty()) {
+            temporalesRecorrido.add(resultado);
+        }
+        recorridoGraficoEmitido = true;
+        if (!"GRAFO".equals(estructurasTipo.get(grafo))) {
+            emitir("    ; VECINOS pendiente: " + grafo + " no es GRAFO");
+            return;
+        }
+
+        String loop = nuevaEtiqueta();
+        String siguiente = nuevaEtiqueta();
+        String fin = nuevaEtiqueta();
+        emitir("    ; VECINOS " + nodo + " EN " + grafo + " impreso en modo grafico");
+        emitir("    mov cx, 10");
+        emitir("    mov dx, 58");
+        emitir("    call SET_CURSOR_PIXEL");
+        emitirTextoGrafico("VECINOS DE ");
+        cargarAX(nodo);
+        emitir("    mov [gfx_busqueda], ax");
+        emitir("    mov [gfx_valor], ax");
+        emitir("    call PRINT_NUM_GRAFICO");
+        emitirTextoGrafico(": ");
+        emitir("    mov word ptr [gfx_i], 0");
+        emitir(loop + ":");
+        emitir("    mov ax, [gfx_i]");
+        emitir("    cmp ax, [" + grafo + "_edge_count]");
+        emitir("    jge " + fin);
+        emitir("    mov bx, ax");
+        emitir("    shl bx, 1");
+        emitir("    mov ax, " + grafo + "_edges_from[bx]");
+        emitir("    cmp ax, [gfx_busqueda]");
+        emitir("    jne " + siguiente);
+        emitir("    mov ax, " + grafo + "_edges_to[bx]");
+        emitir("    mov [gfx_valor], ax");
+        emitir("    call PRINT_VALOR_CORCHETES");
+        emitir("    call PRINT_ESPACIO_GRAFICO");
+        emitir(siguiente + ":");
+        emitir("    inc word ptr [gfx_i]");
+        emitir("    jmp " + loop);
+        emitir(fin + ":");
+    }
+
+    private void traducirTamanoEstructura(String estructura, String resultado) {
+        registrarVariable(resultado);
+        if (!resultado.isEmpty()) {
+            temporalesTamano.add(resultado);
+        }
+        String tipo = estructurasTipo.get(estructura);
+        emitir("    ; TAMANO EN " + estructura + " -> " + resultado);
+        if ("PILA".equals(tipo)) {
+            emitir("    mov ax, [" + estructura + "_top]");
+        } else if ("COLA".equals(tipo) || "LISTA".equals(tipo) || "HASH".equals(tipo)) {
+            emitir("    mov ax, [" + estructura + "_count]");
+        } else if ("GRAFO".equals(tipo)) {
+            emitir("    mov ax, [" + estructura + "_node_count]");
+        } else {
+            emitir("    mov ax, 0");
+        }
+        emitir("    mov [" + resultado + "], ax");
+    }
+
+    private void traducirFrenteCola(String op, String cola, String resultado) {
+        registrarVariable(resultado);
+        if (!resultado.isEmpty() && !temporalesFrenteY.containsKey(resultado)) {
+            temporalesFrenteY.put(resultado, 50 + (temporalesFrenteY.size() * 15));
+        }
+        recorridoGraficoEmitido = true;
+        if (!"COLA".equals(estructurasTipo.get(cola))) {
+            emitir("    ; " + op + " pendiente: " + cola + " no es COLA");
+            emitir("    mov word ptr [" + resultado + "], 0");
+            return;
+        }
+
+        String vacia = nuevaEtiqueta();
+        String fin = nuevaEtiqueta();
+        emitir("    ; " + resultado + " = " + op + " " + cola);
+        emitir("    cmp word ptr [" + cola + "_count], 0");
+        emitir("    je " + vacia);
+        emitir("    mov bx, [" + cola + "_front]");
+        emitir("    shl bx, 1");
+        emitir("    mov ax, " + cola + "[bx]");
+        emitir("    mov [" + resultado + "], ax");
+        emitir("    jmp " + fin);
+        emitir(vacia + ":");
+        emitir("    mov word ptr [" + resultado + "], 0");
+        emitir(fin + ":");
+    }
+
+    private void traducirTopePila(String op, String pila, String resultado) {
+        registrarVariable(resultado);
+        if (!resultado.isEmpty()) {
+            temporalesTope.add(resultado);
+        }
+        if (!"PILA".equals(estructurasTipo.get(pila))) {
+            emitir("    ; " + op + " pendiente: " + pila + " no es PILA");
+            emitir("    mov word ptr [" + resultado + "], 0");
+            return;
+        }
+
+        String vacia = nuevaEtiqueta();
+        String fin = nuevaEtiqueta();
+        emitir("    ; " + op + " EN " + pila + " -> " + resultado);
+        emitir("    cmp word ptr [" + pila + "_top], 0");
+        emitir("    je " + vacia);
+        emitir("    mov bx, [" + pila + "_top]");
+        emitir("    dec bx");
+        emitir("    shl bx, 1");
+        emitir("    mov ax, " + pila + "[bx]");
+        emitir("    mov [" + resultado + "], ax");
+        emitir("    jmp " + fin);
+        emitir(vacia + ":");
+        emitir("    mov word ptr [" + resultado + "], 0");
+        emitir(fin + ":");
     }
 
     private void finalizarPrograma() {
-        emitir("    call GRAFICAR_TODO");
+        // Antes de salir espera una tecla, vuelve a modo texto 03h y termina
+        // con int 21h. Asi la ventana grafica no desaparece inmediatamente.
+        if (!recorridoGraficoEmitido) {
+            emitir("    call GRAFICAR_TODO");
+        }
         emitir("    mov ah, 00h");
         emitir("    int 16h");
         emitir("    mov ax, 0003h");
@@ -395,6 +749,8 @@ public class GeneradorEnsambladorGrafico {
     }
 
     private void agregarRutinasGraficas() {
+        // Al final del archivo se agregan las subrutinas reutilizables:
+        // primitivas de dibujo, GRAFICAR_TODO y rutinas por tipo de estructura.
         emitir("; ============================================");
         emitir("; RUTINAS GRAFICAS");
         emitir("; ============================================");
@@ -452,17 +808,8 @@ public class GeneradorEnsambladorGrafico {
         emitir("");
         emitir("LIMPIAR_PANTALLA proc");
         emitir("    push ax");
-        emitir("    push bx");
-        emitir("    push cx");
-        emitir("    push dx");
-        emitir("    mov ax, 0600h");
-        emitir("    mov bh, 00h");
-        emitir("    mov cx, 0000h");
-        emitir("    mov dx, 1827h");
+        emitir("    mov ax, 0013h");
         emitir("    int 10h");
-        emitir("    pop dx");
-        emitir("    pop cx");
-        emitir("    pop bx");
         emitir("    pop ax");
         emitir("    ret");
         emitir("LIMPIAR_PANTALLA endp");
@@ -499,6 +846,7 @@ public class GeneradorEnsambladorGrafico {
         emitir("    jne png_convertir");
         emitir("    mov al, '0'");
         emitir("    mov ah, 0Eh");
+        emitir("    mov bl, [gfx_color]");
         emitir("    int 10h");
         emitir("    jmp png_fin");
         emitir("png_convertir:");
@@ -516,6 +864,7 @@ public class GeneradorEnsambladorGrafico {
         emitir("    mov al, dl");
         emitir("    add al, '0'");
         emitir("    mov ah, 0Eh");
+        emitir("    mov bl, [gfx_color]");
         emitir("    int 10h");
         emitir("    loop png_imprimir");
         emitir("png_fin:");
@@ -526,16 +875,84 @@ public class GeneradorEnsambladorGrafico {
         emitir("    ret");
         emitir("PRINT_NUM_GRAFICO endp");
         emitir("");
+        emitir("PRINT_ESPACIO_GRAFICO proc");
+        emitir("    push ax");
+        emitir("    push bx");
+        emitir("    mov al, ' '");
+        emitir("    mov ah, 0Eh");
+        emitir("    mov bl, [gfx_color]");
+        emitir("    int 10h");
+        emitir("    pop bx");
+        emitir("    pop ax");
+        emitir("    ret");
+        emitir("PRINT_ESPACIO_GRAFICO endp");
+        emitir("");
+        emitir("PRINT_VALOR_CORCHETES proc");
+        emitir("    push ax");
+        emitir("    push bx");
+        emitir("    mov al, '['");
+        emitir("    mov ah, 0Eh");
+        emitir("    mov bl, [gfx_color]");
+        emitir("    int 10h");
+        emitir("    mov ax, [gfx_valor]");
+        emitir("    call PRINT_NUM_GRAFICO");
+        emitir("    mov al, ']'");
+        emitir("    mov ah, 0Eh");
+        emitir("    mov bl, [gfx_color]");
+        emitir("    int 10h");
+        emitir("    pop bx");
+        emitir("    pop ax");
+        emitir("    ret");
+        emitir("PRINT_VALOR_CORCHETES endp");
+        emitir("");
+        emitir("PAUSA_GRAFICA proc");
+        emitir("    push cx");
+        emitir("    push dx");
+        emitir("    mov cx, 1");
+        emitir("pg_loop_ext:");
+        emitir("    mov dx, 1000h");
+        emitir("pg_loop_int:");
+        emitir("    dec dx");
+        emitir("    jnz pg_loop_int");
+        emitir("    loop pg_loop_ext");
+        emitir("    pop dx");
+        emitir("    pop cx");
+        emitir("    ret");
+        emitir("PAUSA_GRAFICA endp");
+        emitir("");
     }
 
     private void agregarGraficarTodo() {
         emitir("GRAFICAR_TODO proc");
+        emitir("    mov byte ptr [gfx_color], 0Fh");
         emitir("    call LIMPIAR_PANTALLA");
         for (Map.Entry<String, String> e : estructurasTipo.entrySet()) {
             emitir("    call GRAFICAR_" + e.getValue() + "_" + e.getKey());
         }
+        emitir("    call DIBUJAR_ULTIMA_BUSQUEDA");
         emitir("    ret");
         emitir("GRAFICAR_TODO endp");
+        emitir("");
+        rutinaUltimaBusqueda();
+    }
+
+    private void rutinaUltimaBusqueda() {
+        String fin = "DUB_FIN";
+        emitir("DIBUJAR_ULTIMA_BUSQUEDA proc");
+        emitir("    cmp word ptr [gfx_busqueda_activa], 1");
+        emitir("    jne " + fin);
+        emitir("    mov cx, 104");
+        emitir("    mov dx, 88");
+        emitir("    call SET_CURSOR_PIXEL");
+        emitirTextoGrafico("BUSCAR ");
+        emitir("    mov ax, [gfx_busqueda]");
+        emitir("    call PRINT_NUM_GRAFICO");
+        emitirTextoGrafico(": ");
+        emitir("    mov ax, [gfx_busqueda_resultado]");
+        emitir("    call PRINT_NUM_GRAFICO");
+        emitir(fin + ":");
+        emitir("    ret");
+        emitir("DIBUJAR_ULTIMA_BUSQUEDA endp");
         emitir("");
     }
 
@@ -551,6 +968,7 @@ public class GeneradorEnsambladorGrafico {
                 rutinaGraficaLista(nombre);
             } else if ("ARBOL".equals(tipo)) {
                 rutinaGraficaArbol(nombre);
+                rutinaRecorridosArbol(nombre);
             } else if ("GRAFO".equals(tipo)) {
                 rutinaGraficaGrafo(nombre);
             } else if ("HASH".equals(tipo)) {
@@ -578,14 +996,8 @@ public class GeneradorEnsambladorGrafico {
         emitir("    mov dx, 180");
         emitir("    sub dx, ax");
         emitir("    mov cx, 10");
-        emitir("    mov si, 42");
-        emitir("    mov di, 10");
-        emitir("    mov al, 0Ah");
-        emitir("    call DIBUJAR_RECTANGULO");
-        emitir("    mov cx, 22");
         emitir("    call SET_CURSOR_PIXEL");
-        emitir("    mov ax, [gfx_valor]");
-        emitir("    call PRINT_NUM_GRAFICO");
+        emitir("    call PRINT_VALOR_CORCHETES");
         emitir("    inc word ptr [gfx_i]");
         emitir("    jmp " + loop);
         emitir(fin + ":");
@@ -618,13 +1030,8 @@ public class GeneradorEnsambladorGrafico {
         emitir("    mov cx, 70");
         emitir("    add cx, ax");
         emitir("    mov dx, 20");
-        emitir("    mov si, 34");
-        emitir("    mov di, 12");
-        emitir("    mov al, 0Bh");
-        emitir("    call DIBUJAR_RECTANGULO");
         emitir("    call SET_CURSOR_PIXEL");
-        emitir("    mov ax, [gfx_valor]");
-        emitir("    call PRINT_NUM_GRAFICO");
+        emitir("    call PRINT_VALOR_CORCHETES");
         emitir("    inc word ptr [gfx_i]");
         emitir("    jmp " + loop);
         emitir(fin + ":");
@@ -651,13 +1058,8 @@ public class GeneradorEnsambladorGrafico {
         emitir("    mov cx, 10");
         emitir("    add cx, ax");
         emitir("    mov dx, 48");
-        emitir("    mov si, 34");
-        emitir("    mov di, 12");
-        emitir("    mov al, 0Eh");
-        emitir("    call DIBUJAR_RECTANGULO");
         emitir("    call SET_CURSOR_PIXEL");
-        emitir("    mov ax, [gfx_valor]");
-        emitir("    call PRINT_NUM_GRAFICO");
+        emitir("    call PRINT_VALOR_CORCHETES");
         emitir("    pop bx");
         emitir("    mov bx, HEAP[bx+2]");
         emitir("    inc word ptr [gfx_i]");
@@ -696,9 +1098,6 @@ public class GeneradorEnsambladorGrafico {
         emitir("    mov ax, HEAP[bx]");
         emitir("    mov [gfx_valor], ax");
         emitir("    mov si, 28");
-        emitir("    mov di, 12");
-        emitir("    mov al, 0Ch");
-        emitir("    call DIBUJAR_RECTANGULO");
         emitir("    call SET_CURSOR_PIXEL");
         emitir("    mov ax, [gfx_valor]");
         emitir("    call PRINT_NUM_GRAFICO");
@@ -711,6 +1110,24 @@ public class GeneradorEnsambladorGrafico {
         emitir("    mov ax, HEAP[bx+2]");
         emitir("    cmp ax, 0");
         emitir("    je " + sinIzq);
+        emitir("    push ax");
+        emitir("    push bx");
+        emitir("    push cx");
+        emitir("    push dx");
+        emitir("    push si");
+        emitir("    mov ax, si");
+        emitir("    shr ax, 1");
+        emitir("    sub cx, ax");
+        emitir("    add dx, 12");
+        emitir("    call SET_CURSOR_PIXEL");
+        emitir("    mov al, '/'");
+        emitir("    mov ah, 0Eh");
+        emitir("    int 10h");
+        emitir("    pop si");
+        emitir("    pop dx");
+        emitir("    pop cx");
+        emitir("    pop bx");
+        emitir("    pop ax");
         emitir("    push bx");
         emitir("    push cx");
         emitir("    push dx");
@@ -734,6 +1151,24 @@ public class GeneradorEnsambladorGrafico {
         emitir("    mov ax, HEAP[bx+4]");
         emitir("    cmp ax, 0");
         emitir("    je " + sinDer);
+        emitir("    push ax");
+        emitir("    push bx");
+        emitir("    push cx");
+        emitir("    push dx");
+        emitir("    push si");
+        emitir("    mov ax, si");
+        emitir("    shr ax, 1");
+        emitir("    add cx, ax");
+        emitir("    add dx, 12");
+        emitir("    call SET_CURSOR_PIXEL");
+        emitir("    mov al, '\\'");
+        emitir("    mov ah, 0Eh");
+        emitir("    int 10h");
+        emitir("    pop si");
+        emitir("    pop dx");
+        emitir("    pop cx");
+        emitir("    pop bx");
+        emitir("    pop ax");
         emitir("    push bx");
         emitir("    push cx");
         emitir("    push dx");
@@ -762,35 +1197,189 @@ public class GeneradorEnsambladorGrafico {
         emitir("");
     }
 
-    private void rutinaGraficaGrafo(String nombre) {
-        String loop = nombre + "_gg_loop";
-        String fin = nombre + "_gg_fin";
-        emitir("GRAFICAR_GRAFO_" + nombre + " proc");
-        emitir("    mov word ptr [gfx_i], 0");
+    private void rutinaRecorridosArbol(String nombre) {
+        rutinaRecorridoPreorden(nombre);
+        rutinaRecorridoInorden(nombre);
+        rutinaRecorridoPostorden(nombre);
+        rutinaRecorridoNiveles(nombre);
+    }
+
+    private void emitirImprimirNodoRecorrido() {
+        emitir("    mov ax, HEAP[bx]");
+        emitir("    call PRINT_NUM_GRAFICO");
+        emitir("    call PRINT_ESPACIO_GRAFICO");
+    }
+
+    private void rutinaRecorridoPreorden(String nombre) {
+        String proc = "RECORRIDO_PREORDEN_" + nombre;
+        String fin = proc + "_FIN";
+        emitir(proc + " proc");
+        emitir("    cmp bx, 0");
+        emitir("    je " + fin);
+        emitirImprimirNodoRecorrido();
+        emitir("    push bx");
+        emitir("    mov bx, HEAP[bx+2]");
+        emitir("    call " + proc);
+        emitir("    pop bx");
+        emitir("    mov bx, HEAP[bx+4]");
+        emitir("    call " + proc);
+        emitir(fin + ":");
+        emitir("    ret");
+        emitir(proc + " endp");
+        emitir("");
+    }
+
+    private void rutinaRecorridoInorden(String nombre) {
+        String proc = "RECORRIDO_INORDEN_" + nombre;
+        String fin = proc + "_FIN";
+        emitir(proc + " proc");
+        emitir("    cmp bx, 0");
+        emitir("    je " + fin);
+        emitir("    push bx");
+        emitir("    mov bx, HEAP[bx+2]");
+        emitir("    call " + proc);
+        emitir("    pop bx");
+        emitirImprimirNodoRecorrido();
+        emitir("    mov bx, HEAP[bx+4]");
+        emitir("    call " + proc);
+        emitir(fin + ":");
+        emitir("    ret");
+        emitir(proc + " endp");
+        emitir("");
+    }
+
+    private void rutinaRecorridoPostorden(String nombre) {
+        String proc = "RECORRIDO_POSTORDEN_" + nombre;
+        String fin = proc + "_FIN";
+        emitir(proc + " proc");
+        emitir("    cmp bx, 0");
+        emitir("    je " + fin);
+        emitir("    push bx");
+        emitir("    mov bx, HEAP[bx+2]");
+        emitir("    call " + proc);
+        emitir("    pop bx");
+        emitir("    push bx");
+        emitir("    mov bx, HEAP[bx+4]");
+        emitir("    call " + proc);
+        emitir("    pop bx");
+        emitirImprimirNodoRecorrido();
+        emitir(fin + ":");
+        emitir("    ret");
+        emitir(proc + " endp");
+        emitir("");
+    }
+
+    private void rutinaRecorridoNiveles(String nombre) {
+        String proc = "RECORRIDO_NIVELES_" + nombre;
+        String loop = proc + "_LOOP";
+        String sinIzq = proc + "_SIN_IZQ";
+        String sinDer = proc + "_SIN_DER";
+        String fin = proc + "_FIN";
+        emitir(proc + " proc");
+        emitir("    cmp bx, 0");
+        emitir("    je " + fin);
+        emitir("    mov word ptr [gfx_q_front], 0");
+        emitir("    mov word ptr [gfx_q_rear], 0");
+        emitir("    mov si, [gfx_q_rear]");
+        emitir("    shl si, 1");
+        emitir("    mov gfx_queue[si], bx");
+        emitir("    inc word ptr [gfx_q_rear]");
         emitir(loop + ":");
+        emitir("    mov ax, [gfx_q_front]");
+        emitir("    cmp ax, [gfx_q_rear]");
+        emitir("    jge " + fin);
+        emitir("    mov si, ax");
+        emitir("    shl si, 1");
+        emitir("    mov bx, gfx_queue[si]");
+        emitir("    inc word ptr [gfx_q_front]");
+        emitirImprimirNodoRecorrido();
+        emitir("    mov ax, HEAP[bx+2]");
+        emitir("    cmp ax, 0");
+        emitir("    je " + sinIzq);
+        emitir("    mov si, [gfx_q_rear]");
+        emitir("    cmp si, 128");
+        emitir("    jge " + sinIzq);
+        emitir("    shl si, 1");
+        emitir("    mov gfx_queue[si], ax");
+        emitir("    inc word ptr [gfx_q_rear]");
+        emitir(sinIzq + ":");
+        emitir("    mov ax, HEAP[bx+4]");
+        emitir("    cmp ax, 0");
+        emitir("    je " + sinDer);
+        emitir("    mov si, [gfx_q_rear]");
+        emitir("    cmp si, 128");
+        emitir("    jge " + sinDer);
+        emitir("    shl si, 1");
+        emitir("    mov gfx_queue[si], ax");
+        emitir("    inc word ptr [gfx_q_rear]");
+        emitir(sinDer + ":");
+        emitir("    jmp " + loop);
+        emitir(fin + ":");
+        emitir("    ret");
+        emitir(proc + " endp");
+        emitir("");
+    }
+
+    private void rutinaGraficaGrafo(String nombre) {
+        String loopNodos = nombre + "_gg_nodos_loop";
+        String sinConector = nombre + "_gg_sin_conector";
+        String finNodos = nombre + "_gg_nodos_fin";
+        String loopAristas = nombre + "_gg_aristas_loop";
+        String finAristas = nombre + "_gg_aristas_fin";
+        emitir("GRAFICAR_GRAFO_" + nombre + " proc");
+        emitir("    mov cx, 15");
+        emitir("    mov dx, 120");
+        emitir("    call SET_CURSOR_PIXEL");
+        emitirTextoGrafico("NODOS: ");
+        emitir("    mov word ptr [gfx_i], 0");
+        emitir(loopNodos + ":");
         emitir("    mov ax, [gfx_i]");
         emitir("    cmp ax, [" + nombre + "_node_count]");
-        emitir("    jge " + fin);
+        emitir("    jge " + finNodos);
         emitir("    mov bx, ax");
         emitir("    shl bx, 1");
         emitir("    mov ax, " + nombre + "_nodes[bx]");
         emitir("    mov [gfx_valor], ax");
+        emitir("    call PRINT_VALOR_CORCHETES");
         emitir("    mov ax, [gfx_i]");
-        emitir("    mov bx, 45");
-        emitir("    mul bx");
-        emitir("    mov cx, 15");
-        emitir("    add cx, ax");
-        emitir("    mov dx, 120");
-        emitir("    mov si, 26");
-        emitir("    mov di, 14");
-        emitir("    mov al, 09h");
-        emitir("    call DIBUJAR_RECTANGULO");
-        emitir("    call SET_CURSOR_PIXEL");
-        emitir("    mov ax, [gfx_valor]");
-        emitir("    call PRINT_NUM_GRAFICO");
+        emitir("    inc ax");
+        emitir("    cmp ax, [" + nombre + "_node_count]");
+        emitir("    jge " + sinConector);
+        emitirTextoGrafico(" -- ");
+        emitir(sinConector + ":");
         emitir("    inc word ptr [gfx_i]");
-        emitir("    jmp " + loop);
-        emitir(fin + ":");
+        emitir("    jmp " + loopNodos);
+        emitir(finNodos + ":");
+        emitir("");
+        emitir("    mov cx, 15");
+        emitir("    mov dx, 136");
+        emitir("    call SET_CURSOR_PIXEL");
+        emitirTextoGrafico("ARISTAS:");
+        emitir("    mov word ptr [gfx_i], 0");
+        emitir(loopAristas + ":");
+        emitir("    mov ax, [gfx_i]");
+        emitir("    cmp ax, [" + nombre + "_edge_count]");
+        emitir("    jge " + finAristas);
+        emitir("    mov bx, 10");
+        emitir("    mul bx");
+        emitir("    mov dx, 148");
+        emitir("    add dx, ax");
+        emitir("    mov cx, 15");
+        emitir("    call SET_CURSOR_PIXEL");
+        emitir("    mov bx, [gfx_i]");
+        emitir("    shl bx, 1");
+        emitir("    mov ax, " + nombre + "_edges_from[bx]");
+        emitir("    mov [gfx_valor], ax");
+        emitir("    call PRINT_VALOR_CORCHETES");
+        emitirTextoGrafico(" -> ");
+        emitir("    mov bx, [gfx_i]");
+        emitir("    shl bx, 1");
+        emitir("    mov ax, " + nombre + "_edges_to[bx]");
+        emitir("    mov [gfx_valor], ax");
+        emitir("    call PRINT_VALOR_CORCHETES");
+        emitir("    inc word ptr [gfx_i]");
+        emitir("    jmp " + loopAristas);
+        emitir(finAristas + ":");
         emitir("    ret");
         emitir("GRAFICAR_GRAFO_" + nombre + " endp");
         emitir("");
@@ -799,38 +1388,90 @@ public class GeneradorEnsambladorGrafico {
     private void rutinaGraficaHash(String nombre) {
         String loop = nombre + "_gh_loop";
         String fin = nombre + "_gh_fin";
+        String finBorde = nombre + "_gh_fin_borde";
         emitir("GRAFICAR_HASH_" + nombre + " proc");
+        emitir("    mov cx, 104");
+        emitir("    mov dx, 104");
+        emitir("    call SET_CURSOR_PIXEL");
+        emitirTextoGrafico("+--------+-------+-------+");
+        emitir("    mov cx, 104");
+        emitir("    mov dx, 112");
+        emitir("    call SET_CURSOR_PIXEL");
+        emitirTextoGrafico("| INDICE | CLAVE | VALOR |");
+        emitir("    mov cx, 104");
+        emitir("    mov dx, 120");
+        emitir("    call SET_CURSOR_PIXEL");
+        emitirTextoGrafico("+--------+-------+-------+");
         emitir("    mov word ptr [gfx_i], 0");
         emitir(loop + ":");
         emitir("    mov ax, [gfx_i]");
         emitir("    cmp ax, [" + nombre + "_count]");
         emitir("    jge " + fin);
-        emitir("    mov bx, ax");
+        emitir("    cmp ax, 8");
+        emitir("    jge " + fin);
+        emitir("    mov ax, [gfx_i]");
+        emitir("    mov bx, 8");
+        emitir("    mul bx");
+        emitir("    mov dx, 128");
+        emitir("    add dx, ax");
+        emitir("    mov cx, 104");
+        emitir("    call SET_CURSOR_PIXEL");
+        emitirTextoGrafico("|        |       |       |");
+        emitir("    mov ax, [gfx_i]");
+        emitir("    mov bx, 8");
+        emitir("    mul bx");
+        emitir("    mov dx, 128");
+        emitir("    add dx, ax");
+        emitir("    mov cx, 136");
+        emitir("    call SET_CURSOR_PIXEL");
+        emitir("    mov ax, [gfx_i]");
+        emitir("    inc ax");
+        emitir("    call PRINT_NUM_GRAFICO");
+        emitir("    mov ax, [gfx_i]");
+        emitir("    mov si, 8");
+        emitir("    mul si");
+        emitir("    mov dx, 128");
+        emitir("    add dx, ax");
+        emitir("    mov cx, 200");
+        emitir("    call SET_CURSOR_PIXEL");
+        emitir("    mov bx, [gfx_i]");
+        emitir("    shl bx, 1");
+        emitir("    mov ax, " + nombre + "_keys[bx]");
+        emitir("    call PRINT_NUM_GRAFICO");
+        emitir("    mov ax, [gfx_i]");
+        emitir("    mov si, 8");
+        emitir("    mul si");
+        emitir("    mov dx, 128");
+        emitir("    add dx, ax");
+        emitir("    mov cx, 264");
+        emitir("    call SET_CURSOR_PIXEL");
+        emitir("    mov bx, [gfx_i]");
         emitir("    shl bx, 1");
         emitir("    mov ax, " + nombre + "_values[bx]");
-        emitir("    mov [gfx_valor], ax");
-        emitir("    mov ax, [gfx_i]");
-        emitir("    mov bx, 18");
-        emitir("    mul bx");
-        emitir("    mov dx, 150");
-        emitir("    add dx, ax");
-        emitir("    mov cx, 245");
-        emitir("    mov si, 44");
-        emitir("    mov di, 14");
-        emitir("    mov al, 0Dh");
-        emitir("    call DIBUJAR_RECTANGULO");
-        emitir("    call SET_CURSOR_PIXEL");
-        emitir("    mov ax, [gfx_valor]");
         emitir("    call PRINT_NUM_GRAFICO");
         emitir("    inc word ptr [gfx_i]");
         emitir("    jmp " + loop);
         emitir(fin + ":");
+        emitir("    mov ax, [" + nombre + "_count]");
+        emitir("    cmp ax, 8");
+        emitir("    jle " + finBorde);
+        emitir("    mov ax, 8");
+        emitir(finBorde + ":");
+        emitir("    mov bx, 8");
+        emitir("    mul bx");
+        emitir("    mov dx, 128");
+        emitir("    add dx, ax");
+        emitir("    mov cx, 104");
+        emitir("    call SET_CURSOR_PIXEL");
+        emitirTextoGrafico("+--------+-------+-------+");
         emitir("    ret");
         emitir("GRAFICAR_HASH_" + nombre + " endp");
         emitir("");
     }
 
     public String obtenerCodigoEnsamblador() {
+        // Construye el ASM final e inserta en .data las variables temporales,
+        // estructuras y buffers graficos que se descubrieron durante la traduccion.
         StringBuilder sb = new StringBuilder();
         for (String linea : codigo) {
             if (".code".equals(linea)) {
@@ -840,6 +1481,16 @@ public class GeneradorEnsambladorGrafico {
                 }
                 sb.append("    gfx_i dw 0\n");
                 sb.append("    gfx_valor dw 0\n");
+                sb.append("    gfx_busqueda dw 0\n");
+                sb.append("    gfx_busqueda_resultado dw 0\n");
+                sb.append("    gfx_busqueda_activa dw 0\n");
+                sb.append("    gfx_ultimo_desapilado dw 0\n");
+                sb.append("    gfx_color db 0Fh\n");
+                if (colaNivelesNecesaria) {
+                    sb.append("    gfx_queue dw 128 dup(0)\n");
+                    sb.append("    gfx_q_front dw 0\n");
+                    sb.append("    gfx_q_rear dw 0\n");
+                }
                 sb.append("    rect_x dw 0\n");
                 sb.append("    rect_y dw 0\n");
                 sb.append("    rect_w dw 0\n");
@@ -860,6 +1511,7 @@ public class GeneradorEnsambladorGrafico {
                     } else if ("LISTA".equals(t)) {
                         sb.append("    ").append(n).append("_head dw 0\n");
                         sb.append("    ").append(n).append("_tail dw 0\n");
+                        sb.append("    ").append(n).append("_count dw 0\n");
                     } else if ("ARBOL".equals(t)) {
                         sb.append("    ").append(n).append("_root dw 0\n");
                     } else if ("GRAFO".equals(t)) {
@@ -951,27 +1603,20 @@ public class GeneradorEnsambladorGrafico {
         return "GFX_L" + contadorEtiquetas++;
     }
 
-    private void emitir(String linea) {
-        codigo.add(linea);
+    private void emitirTextoGrafico(String texto) {
+        for (int i = 0; i < texto.length(); i++) {
+            char c = texto.charAt(i);
+            emitir("    mov al, '" + escaparCaracterAsm(c) + "'");
+            emitir("    mov ah, 0Eh");
+            emitir("    mov bl, [gfx_color]");
+            emitir("    int 10h");
+        }
     }
-
-    public static void main(String[] args) {
-        GeneradorEnsambladorGrafico g = new GeneradorEnsambladorGrafico();
-        List<Cuadruplo> demo = new ArrayList<>();
-        demo.add(new Cuadruplo("ALLOC", "100", "PILA", "miPila"));
-        demo.add(new Cuadruplo("APILAR", "10", "", "miPila"));
-        demo.add(new Cuadruplo("APILAR", "20", "", "miPila"));
-        demo.add(new Cuadruplo("ALLOC", "50", "COLA", "miCola"));
-        demo.add(new Cuadruplo("ENCOLAR", "7", "", "miCola"));
-        demo.add(new Cuadruplo("ALLOC", "100", "LISTA_ENLAZADA", "miLista"));
-        demo.add(new Cuadruplo("INSERTAR_FINAL", "5", "", "miLista"));
-        demo.add(new Cuadruplo("ALLOC", "100", "ARBOL_BINARIO", "miArbol"));
-        demo.add(new Cuadruplo("AGREGARNODO", "1", "25", "miArbol"));
-        demo.add(new Cuadruplo("ALLOC", "30", "GRAFO", "miGrafo"));
-        demo.add(new Cuadruplo("AGREGARNODO", "1", "", "miGrafo"));
-        demo.add(new Cuadruplo("ALLOC", "30", "TABLA_HASH", "miHash"));
-        demo.add(new Cuadruplo("INSERTAR", "101", "1000", "miHash"));
-        g.procesarCuadruplos(demo);
-        System.out.println(g.obtenerCodigoEnsamblador());
+    private String escaparCaracterAsm(char c) {
+        return c == '\'' ? "''" : Character.toString(c);
+    }
+    private void emitir(String linea) {
+        // Punto unico para agregar lineas ASM al programa grafico.
+        codigo.add(linea);
     }
 }

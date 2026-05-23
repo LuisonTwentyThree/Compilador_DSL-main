@@ -26,6 +26,9 @@ public class OptimizadorCGI {
     private static final int MAX_PASADAS = 6;
 
     public List<Cuadruplo> optimizar(List<Cuadruplo> codigo) {
+        // La optimizacion trabaja sobre una copia para no modificar la lista
+        // original que genero GeneradorCGI. Asi la GUI puede mostrar ambas:
+        // codigo intermedio original y codigo optimizado.
         if (codigo == null) {
             return Collections.emptyList();
         }
@@ -33,6 +36,8 @@ public class OptimizadorCGI {
         List<Cuadruplo> actual = copiarCodigo(codigo);
 
         for (int i = 0; i < MAX_PASADAS; i++) {
+            // Se aplican varias pasadas porque una mejora puede habilitar otra.
+            // La firma permite detenerse cuando ya no hubo cambios.
             String antes = firma(actual);
 
             actual = simplificarOperaciones(actual);
@@ -51,6 +56,8 @@ public class OptimizadorCGI {
     }
 
     private List<Cuadruplo> simplificarOperaciones(List<Cuadruplo> codigo) {
+        // Reduce operaciones locales: constantes, algebra simple y saltos cuya
+        // condicion ya se conoce. No analiza todo el programa, solo cada linea.
         List<Cuadruplo> salida = new ArrayList<>();
 
         for (Cuadruplo original : codigo) {
@@ -94,6 +101,8 @@ public class OptimizadorCGI {
     }
 
     private Cuadruplo simplificarAritmetica(Cuadruplo c) {
+        // Plegado de constantes: 2 + 3 se convierte en = 5.
+        // Reglas algebraicas: x + 0 -> x, x * 1 -> x, x * 0 -> 0, etc.
         String op = c.operador;
         String a = c.argumento1;
         String b = c.argumento2;
@@ -131,6 +140,9 @@ public class OptimizadorCGI {
     }
 
     private List<Cuadruplo> propagarCopiasYConstantes(List<Cuadruplo> codigo) {
+        // Si sabemos que T1 = 5 o x = T1, intenta usar directamente ese valor
+        // en instrucciones posteriores. Se limpia al cruzar etiquetas o saltos
+        // porque ahi cambia el flujo y seria riesgoso asumir continuidad.
         Map<String, String> reemplazos = new HashMap<>();
         List<Cuadruplo> salida = new ArrayList<>();
 
@@ -178,6 +190,8 @@ public class OptimizadorCGI {
     }
 
     private List<Cuadruplo> simplificarSaltos(List<Cuadruplo> codigo) {
+        // Quita saltos que caen inmediatamente en la siguiente etiqueta y
+        // redirige etiquetas consecutivas a una sola etiqueta canonica.
         List<Cuadruplo> redirigido = redirigirEtiquetasConsecutivas(codigo);
         List<Cuadruplo> salida = new ArrayList<>();
 
@@ -235,6 +249,8 @@ public class OptimizadorCGI {
     }
 
     private List<Cuadruplo> eliminarCodigoInalcanzable(List<Cuadruplo> codigo) {
+        // Despues de un GOTO incondicional, las instrucciones siguientes no se
+        // ejecutan hasta encontrar una etiqueta. Esas lineas se pueden omitir.
         List<Cuadruplo> salida = new ArrayList<>();
         boolean inalcanzable = false;
 
@@ -263,6 +279,8 @@ public class OptimizadorCGI {
     }
 
     private List<Cuadruplo> eliminarCodigoMuerto(List<Cuadruplo> codigo) {
+        // Recorre de atras hacia adelante para conservar solo resultados que
+        // luego se usan. Mantiene siempre control y operaciones con efectos.
         Set<String> usados = new HashSet<>();
         List<Cuadruplo> salida = new ArrayList<>();
 
@@ -413,6 +431,8 @@ public class OptimizadorCGI {
     }
 
     private boolean esEfectoSecundario(Cuadruplo c) {
+        // Estas operaciones no se deben borrar aunque su resultado no se use,
+        // porque modifican estructuras, imprimen, reservan memoria o reportan errores.
         if (c == null || c.operador == null) {
             return false;
         }

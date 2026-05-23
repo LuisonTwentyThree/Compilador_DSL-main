@@ -21,6 +21,23 @@ MOSTRAR "Árbol con 7 nodos creado";
 // Crear lista enlazada
 estructura lista listaEnlazada;
 
+
+//crea arbol
+AGREGARNODO 1 50 EN arbol;
+AGREGARNODO 1 30 EN arbol;
+AGREGARNODO 1 70 EN arbol;
+AGREGARNODO 1 20 EN arbol;
+AGREGARNODO 2 40 EN arbol;
+
+MOSTRAR PREORDEN EN arbol;
+MOSTRAR INORDEN EN arbol;
+MOSTRAR POSTORDEN EN arbol;
+MOSTRAR RECORRIDOPORNIVELES EN arbol;
+
+
+
+
+
 // Insertar en lista con clave-valor
 INSERTAR 100 "primer" EN lista;
 INSERTAR 200 "segundo" EN lista;

@@ -52,6 +52,5 @@ IF (a != b) {
 IF (a >= b) {
     MOSTRAR 2;
 }
-
 // Final
 MOSTRAR 999;

@@ -14,6 +14,10 @@ import compilador.core.NodoAST;
  * usando cuádruplos para todas las operaciones del lenguaje DSL.
  */
 public class GeneradorCGI {
+    // Este generador es la primera etapa despues del analisis sintactico:
+    // recibe el AST y lo convierte en cuadruplos de tres direcciones.
+    // Ejemplo: resultado = 5 + 3 se vuelve algo parecido a:
+    // (+, 5, 3, T1) y luego (=, T1, , resultado).
     private List<Cuadruplo> codigo;
     private int contadorTemporales;
     private int contadorEtiquetas;
@@ -39,18 +43,18 @@ public class GeneradorCGI {
     private String nuevaEtiqueta() {
         return "L" + (contadorEtiquetas++);
     }
-
     /**
      * Agrega un cuádruplo a la lista de código generado
      */
     private void agregar(String op, String arg1, String arg2, String res) {
         codigo.add(new Cuadruplo(op, arg1, arg2, res));
     }
-
     /**
      * Punto de entrada para la generación de código
      */
     public List<Cuadruplo> generar(NodoAST raiz) {
+        // Punto de entrada usado por la GUI. Recorre el arbol completo y
+        // devuelve la lista que luego pasa al optimizador y al generador ASM.
         if (raiz != null) {
             recorrerNodo(raiz);
         }
@@ -73,10 +77,12 @@ public class GeneradorCGI {
      * Maneja todos los tipos de nodos del lenguaje DSL
      */
     private String recorrerNodo(NodoAST nodo) {
+        // Este metodo funciona de forma recursiva: cada tipo de nodo del AST
+        // sabe como traducirse a uno o mas cuadruplos. Cuando una expresion
+        // produce un valor, devuelve el nombre de una variable o temporal.
         if (nodo == null) {
             return "";
         }
-
         String tipo = nodo.getTipo();
         String valor = nodo.getValor();
 
@@ -89,6 +95,8 @@ public class GeneradorCGI {
 
         // ===== NODOS RAÍZ Y BLOQUES =====
         if (tipo.equals("RAIZ") || tipo.equals("LISTA SENTENCIAS") || tipo.equals("BLOQUE_CODIGO")) {
+            // Los nodos contenedores no generan cuadruplos por si mismos;
+            // solo visitan sus hijos en orden.
             if (nodo.getHijos() != null) {
                 for (NodoAST hijo : nodo.getHijos()) {
                     recorrerNodo(hijo);
@@ -114,6 +122,8 @@ public class GeneradorCGI {
 
         // ===== DECLARACIÓN DE VARIABLES =====
         if (tipo.equals("DECLARACION")) {
+            // Una declaracion puede ser primitiva (NUMERO, TEXTO, etc.) o una
+            // estructura (PILA, COLA, ARBOL...). Las estructuras generan ALLOC.
             if (nodo.getHijos() == null || nodo.getHijos().size() < 2) {
                 return "";
             }
@@ -147,6 +157,8 @@ public class GeneradorCGI {
 
         // ===== ASIGNACIÓN =====
         if (tipo.equals("ASIGNACION") || tipo.equals("ACTUALIZACION")) {
+            // Primero se traduce la expresion del lado derecho; si necesita
+            // temporales, se generan antes. Luego se asigna al identificador.
             if (nodo.getHijos().size() >= 2) {
                 String idAsig = recorrerNodo(nodo.getHijos().get(0));
                 String dirAsig = recorrerNodo(nodo.getHijos().get(1));
@@ -225,6 +237,8 @@ public class GeneradorCGI {
         if (tipo.equals("SALIDA")) {
             // MOSTRAR expr
             if (nodo.getHijos() != null && nodo.getHijos().size() > 0) {
+                // MOSTRAR se representa como PRINT para que los backends ASM
+                // sepan que deben emitir una salida.
                 String exprSalida = recorrerNodo(nodo.getHijos().get(0));
                 agregar("PRINT", exprSalida, "", "");
             }
@@ -268,6 +282,8 @@ public class GeneradorCGI {
      * Procesa operaciones matemáticas (+, -, *, /, %)
      */
     private String procesarOperacionMatematica(NodoAST nodo, String operador) {
+        // Las operaciones binarias guardan el resultado en un temporal para que
+        // otras instrucciones puedan reutilizarlo sin recalcular la expresion.
         if (nodo.getHijos() == null || nodo.getHijos().size() < 2) {
             return "";
         }
@@ -288,6 +304,9 @@ public class GeneradorCGI {
      * Para INSERTAR en listas enlazadas y árboles binarios, requiere CLAVE y VALOR
      */
     private String procesarOperacionEstructura(NodoAST nodo, String operacion) {
+        // Aqui se normalizan operaciones del DSL sobre estructuras de datos.
+        // El resultado sigue siendo un cuadruplo generico; el detalle de como
+        // se implementa en ASM queda para GeneradorEnsamblador.
         if (nodo.getHijos() == null || nodo.getHijos().isEmpty()) {
             return "";
         }
@@ -359,6 +378,8 @@ public class GeneradorCGI {
      * Procesa control de flujo (IF, IF-ELSE)
      */
     private String procesarControlFlujo(NodoAST nodo) {
+        // Un IF se traduce con etiquetas y saltos. El backend ASM solo necesita
+        // convertir IF_FALSE, GOTO y ETIQUETA a instrucciones de salto reales.
         if (nodo.getHijos() == null || nodo.getHijos().isEmpty()) {
             return "";
         }
@@ -392,6 +413,8 @@ public class GeneradorCGI {
      * Procesa bucles (WHILE, FOR, DO-WHILE)
      */
     private String procesarBucle(NodoAST nodo) {
+        // Los ciclos tambien se reducen a etiquetas y saltos; asi el resto del
+        // compilador no necesita tratar WHILE/FOR/DO de forma especial.
         if (nodo.getHijos() == null || nodo.getHijos().isEmpty()) {
             return "";
         }

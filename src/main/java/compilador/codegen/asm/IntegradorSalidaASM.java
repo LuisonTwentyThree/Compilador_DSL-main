@@ -12,6 +12,9 @@ import compilador.visualization.VisualizadorArboles;
  * de datos, generando un archivo de salida completo con toda la información.
  */
 public class IntegradorSalidaASM {
+    // Esta clase actua como puente entre el codigo intermedio del compilador
+    // (cuadruplos) y las salidas finales: archivo .asm, reporte .txt y texto
+    // que despues la interfaz grafica muestra en la pestana de ASM.
     private GeneradorEnsamblador generador;
     private List<Cuadruplo> cuadruplos;
     private VisualizadorArboles.NodoABB arbolActual;
@@ -19,6 +22,8 @@ public class IntegradorSalidaASM {
     private String nombreSalidaVIS;
 
     public IntegradorSalidaASM(String nombreBaseSalida) {
+        // El generador traduce los cuadruplos a ensamblador real.
+        // El integrador conserva la lista para poder generar tambien reportes.
         this.generador = new GeneradorEnsamblador();
         this.cuadruplos = new ArrayList<>();
         this.arbolActual = null;
@@ -30,6 +35,8 @@ public class IntegradorSalidaASM {
      * Agrega un cuádruplo para procesamiento
      */
     public void agregarCuadruplo(Cuadruplo c) {
+        // La GUI llama este metodo por cada cuadruplo optimizado.
+        // Todavia no se genera ASM aqui; solo se acumulan instrucciones.
         cuadruplos.add(c);
     }
 
@@ -37,6 +44,8 @@ public class IntegradorSalidaASM {
      * Procesa todos los cuádruplos
      */
     public void procesarTodos() {
+        // Aqui empieza la traduccion: los cuadruplos guardados pasan al
+        // GeneradorEnsamblador, que construye el texto ASM en memoria.
         generador.procesarCuadruplos(cuadruplos);
     }
 
@@ -81,6 +90,8 @@ public class IntegradorSalidaASM {
      */
     public void generarArchivoASM() {
         try (PrintWriter writer = new PrintWriter(new FileWriter(nombreSalidaASM))) {
+            // Escribe a disco el mismo codigo que luego puede mostrarse en la GUI
+            // mediante obtenerCodigoEnsamblador().
             writer.println(generador.obtenerCodigoEnsamblador());
             System.out.println("[✓] Archivo ASM generado: " + nombreSalidaASM);
         } catch (IOException e) {
@@ -128,6 +139,11 @@ public class IntegradorSalidaASM {
      * Genera ambos archivos
      */
     public void generarArchivosCompletos() {
+        // Flujo completo usado por la interfaz grafica:
+        // 1) traduce cuadruplos a ASM,
+        // 2) guarda el .asm,
+        // 3) guarda el reporte de visualizacion,
+        // 4) escribe un resumen en terminal.
         procesarTodos();
         generarArchivoASM();
         generarArchivoVisualizacion();
@@ -157,6 +173,8 @@ public class IntegradorSalidaASM {
      * Obtiene el código ensamblador
      */
     public String obtenerCodigoEnsamblador() {
+        // La GUI usa este metodo para llenar la pestana de ASM sin volver a leer
+        // el archivo .asm desde disco.
         return generador.obtenerCodigoEnsamblador();
     }
 

@@ -5,12 +5,19 @@
 
 CUÁDRUPLOS GENERADOS:
 ──────────────────────────────────────────────────────────────────────
-  0: ALLOC           100                  TABLA_HASH           -> miHash
-  1: INSERTAR        101                  1000                 -> miHash
-  2: INSERTAR        102                  2000                 -> miHash
-  3: INSERTAR        103                  3000                 -> miHash
-  4: BUSCAR          102                                       -> miHash
-  5: ACTUALIZAR      102                  2500                 -> miHash
+  0: ALLOC           100                  PILA                 -> miPila
+  1: APILAR          5                                         -> miPila
+  2: APILAR          15                                        -> miPila
+  3: APILAR          25                                        -> miPila
+  4: TOPE            miPila                                    -> T1
+  5: PRINT           T1                                        -> 
+  6: VACIA           miPila                                    -> T2
+  7: IF_FALSE        T2                   GOTO                 -> L1
+  8: ERROR           Estructura vacía                          -> 
+  9: ETIQUETA                                                  -> L1
+ 10: DESAPILAR                                                 -> miPila
+ 11: TOPE            miPila                                    -> T3
+ 12: PRINT           T3                                        -> 
 
 ══════════════════════════════════════════════════════════════════════
 
