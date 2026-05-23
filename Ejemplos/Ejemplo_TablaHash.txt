@@ -1,0 +1,43 @@
+// ============================================================
+// EJEMPLO: TABLA HASH (Hash Map - clave/valor numericos)
+// Operaciones: INSERTAR, ELIMINAR, BUSCAR, ACTUALIZAR
+// Sintaxis: INSERTAR clave valor EN tabla;
+// ============================================================
+
+CREAR TABLA_HASH miHash;
+
+// --- Verificar VACIA al inicio ---
+IF (VACIA EN miHash) {
+    MOSTRAR 0;
+}
+
+// --- INSERTAR pares clave-valor ---
+INSERTAR 101 1000 EN miHash;
+INSERTAR 102 2000 EN miHash;
+INSERTAR 103 3000 EN miHash;
+INSERTAR 104 4000 EN miHash;
+INSERTAR 105 5000 EN miHash;
+
+// Tabla: {101:1000, 102:2000, 103:3000, 104:4000, 105:5000}
+
+// --- BUSCAR por clave ---
+BUSCAR 102 EN miHash;
+BUSCAR 104 EN miHash;
+//BUSCAR 999 EN miHash;
+
+// --- ACTUALIZAR valor de una clave existente ---
+ACTUALIZAR 102 2500 EN miHash;
+BUSCAR 102 EN miHash;
+
+ACTUALIZAR 104 4999 EN miHash;
+BUSCAR 104 EN miHash;
+
+// --- ELIMINAR una entrada ---
+ELIMINAR 103 EN miHash;
+//BUSCAR 103 EN miHash;
+
+// --- Estado final ---
+BUSCAR 101 EN miHash;
+BUSCAR 105 EN miHash;
+
+MOSTRAR 999;

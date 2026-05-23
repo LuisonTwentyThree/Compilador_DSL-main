@@ -1,0 +1,41 @@
+// ============================================================
+// EJEMPLO: ESTRUCTURAS AVANZADAS
+// Grafo y Tabla Hash
+// ============================================================
+
+// --- TABLA HASH ---
+CREAR TABLA_HASH miHash;
+
+INSERTAR 101 1000 EN miHash;
+INSERTAR 102 2000 EN miHash;
+INSERTAR 103 3000 EN miHash;
+INSERTAR 104 4000 EN miHash;
+
+BUSCAR 102 EN miHash;
+BUSCAR 103 EN miHash;
+
+
+
+// Intentar buscar después de actualizar
+BUSCAR 102 EN miHash;
+
+// --- GRAFO ---
+CREAR GRAFO miGrafo;
+
+// Agregar nodos
+AGREGARNODO 1 100 EN miGrafo;
+AGREGARNODO 2 200 EN miGrafo;
+AGREGARNODO 3 300 EN miGrafo;
+AGREGARNODO 4 400 EN miGrafo;
+AGREGARNODO 5 500 EN miGrafo;
+
+// Agregar aristas
+AGREGARARISTA 1 2 EN miGrafo;
+AGREGARARISTA 2 3 EN miGrafo;
+AGREGARARISTA 3 4 EN miGrafo;
+AGREGARARISTA 4 5 EN miGrafo;
+AGREGARARISTA 1 5 EN miGrafo;
+AGREGARARISTA 2 4 EN miGrafo;
+
+// Mensaje de finalización
+MOSTRAR 999;

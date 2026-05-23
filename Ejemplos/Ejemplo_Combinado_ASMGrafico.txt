@@ -1,0 +1,86 @@
+// ============================================================
+// EJEMPLO COMBINADO PARA ASM GRAFICO
+// Mezcla operaciones aritmeticas optimizables con estructuras.
+// Evita ciclos/IF para que el ASM grafico actual pueda dibujar
+// las estructuras sin depender de saltos pendientes.
+// ============================================================
+
+CREAR NUMERO diez = 10;
+CREAR NUMERO veinte = 10 + 10;
+CREAR NUMERO treinta = 100 - 70;
+CREAR NUMERO cuarenta = 5 * 8;
+CREAR NUMERO cincuenta = 100 / 2;
+
+// ----------------------------
+// PILA
+// ----------------------------
+CREAR PILA pilaGrafica TAMANO 5;
+
+APILAR diez EN pilaGrafica;
+APILAR veinte EN pilaGrafica;
+APILAR treinta EN pilaGrafica;
+
+MOSTRAR TOPE EN pilaGrafica;
+
+// ----------------------------
+// COLA
+// ----------------------------
+CREAR COLA colaGrafica TAMANO 5;
+
+ENCOLAR diez EN colaGrafica;
+ENCOLAR veinte EN colaGrafica;
+ENCOLAR cuarenta EN colaGrafica;
+
+MOSTRAR FRENTE EN colaGrafica;
+
+// ----------------------------
+// LISTA ENLAZADA
+// ----------------------------
+CREAR LISTA_ENLAZADA listaGrafica TAMANO 8;
+
+INSERTAR_FINAL diez EN listaGrafica;
+INSERTAR_FINAL veinte EN listaGrafica;
+INSERTAR_FINAL treinta EN listaGrafica;
+INSERTAR_INICIO cincuenta EN listaGrafica;
+
+BUSCAR veinte EN listaGrafica;
+MOSTRAR TAMANO EN listaGrafica;
+
+// ----------------------------
+// ARBOL BINARIO
+// ----------------------------
+CREAR ARBOL_BINARIO arbolGrafico TAMANO 10;
+
+AGREGARNODO 1 cincuenta EN arbolGrafico;
+AGREGARNODO 2 treinta EN arbolGrafico;
+AGREGARNODO 3 cuarenta EN arbolGrafico;
+
+MOSTRAR INORDEN EN arbolGrafico;
+
+// ----------------------------
+// TABLA HASH
+// ----------------------------
+CREAR TABLA_HASH hashGrafica TAMANO 10;
+
+INSERTAR 101 10 EN hashGrafica;
+INSERTAR 102 20 EN hashGrafica;
+INSERTAR 103 30 EN hashGrafica;
+
+BUSCAR 102 EN hashGrafica;
+ACTUALIZAR 102 40 EN hashGrafica;
+
+// ----------------------------
+// GRAFO
+// ----------------------------
+CREAR GRAFO grafoGrafico TAMANO 8;
+
+AGREGARNODO 1 diez EN grafoGrafico;
+AGREGARNODO 2 veinte EN grafoGrafico;
+AGREGARNODO 3 treinta EN grafoGrafico;
+
+AGREGARARISTA 1 2 EN grafoGrafico;
+AGREGARARISTA 2 3 EN grafoGrafico;
+
+MOSTRAR VECINOS 2 EN grafoGrafico;
+
+MOSTRAR 999;

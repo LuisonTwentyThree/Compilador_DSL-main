@@ -306,7 +306,7 @@ public class GeneradorCGI {
     private String procesarOperacionEstructura(NodoAST nodo, String operacion) {
         // Aqui se normalizan operaciones del DSL sobre estructuras de datos.
         // El resultado sigue siendo un cuadruplo generico; el detalle de como
-        // se implementa en ASM queda para GeneradorEnsamblador.
+        // se implementa en ASM queda para el generador grafico.
         if (nodo.getHijos() == null || nodo.getHijos().isEmpty()) {
             return "";
         }

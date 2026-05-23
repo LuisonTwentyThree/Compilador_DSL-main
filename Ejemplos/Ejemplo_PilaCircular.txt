@@ -1,0 +1,54 @@
+// ============================================================
+// EJEMPLO: PILA CIRCULAR (Circular Stack - LIFO con wrap-around)
+// Operaciones: APILAR, DESAPILAR, TOPE, VACIA, LLENA, TAMANO
+// ============================================================
+
+CREAR PILA_CIRCULAR miPC TAMANO 4;
+
+// --- APILAR hasta llenar ---
+APILAR 100 EN miPC;
+APILAR 200 EN miPC;
+APILAR 300 EN miPC;
+APILAR 400 EN miPC;
+
+// --- Verificar LLENA ---
+IF (LLENA EN miPC) {
+    MOSTRAR 1;
+}
+
+// --- Consultar tamaño ---
+CREAR NUMERO tam = 0;
+tam = TAMANO EN miPC;
+MOSTRAR tam;
+
+// --- Consultar TOPE ---
+CREAR NUMERO valorTope = 0;
+valorTope = TOPE EN miPC;
+MOSTRAR valorTope;
+
+// --- DESAPILAR y verificar nuevo tope ---
+DESAPILAR EN miPC;
+MOSTRAR TOPE EN miPC;
+
+DESAPILAR EN miPC;
+MOSTRAR TOPE EN miPC;
+
+// --- Volver a apilar (comportamiento circular) ---
+APILAR 500 EN miPC;
+APILAR 600 EN miPC;
+MOSTRAR TOPE EN miPC;
+
+// --- Vaciar con WHILE ---
+CREAR NUMERO vaciando = 0;
+WHILE (VACIA EN miPC) {
+    DESAPILAR EN miPC;
+    vaciando = vaciando + 1;
+}
+MOSTRAR vaciando;
+
+// --- Verificar VACIA ---
+IF (VACIA EN miPC) {
+    MOSTRAR 0;
+}
+
+MOSTRAR 999;

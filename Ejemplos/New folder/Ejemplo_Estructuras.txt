@@ -1,0 +1,46 @@
+// ============================================================
+// EJEMPLO: ESTRUCTURAS DE DATOS
+// Demostración de pila, cola y lista enlazada
+// ============================================================
+
+// --- PILA ---
+CREAR PILA miPila TAMANO 100;
+
+APILAR 10 EN miPila;
+APILAR 20 EN miPila;
+APILAR 30 EN miPila;
+
+// Obtener y mostrar el tope
+MOSTRAR TOPE EN miPila;
+
+// Desapilar
+DESAPILAR EN miPila;
+MOSTRAR TOPE EN miPila;
+
+DESAPILAR EN miPila;
+MOSTRAR TOPE EN miPila;
+
+// --- COLA ---
+CREAR COLA miCola TAMANO 50;
+
+ENCOLAR 100 EN miCola;
+ENCOLAR 200 EN miCola;
+ENCOLAR 300 EN miCola;
+
+MOSTRAR FRENTE EN miCola;
+
+DESENCOLAR EN miCola;
+MOSTRAR FRENTE EN miCola;
+
+// --- LISTA ENLAZADA ---
+CREAR LISTA_ENLAZADA miLista;
+
+INSERTAR_FINAL 5 EN miLista;
+INSERTAR_FINAL 10 EN miLista;
+INSERTAR_FINAL 15 EN miLista;
+INSERTAR_INICIO 1 EN miLista;
+
+MOSTRAR TAMANO EN miLista;
+
+// Limpiar
+MOSTRAR 999;

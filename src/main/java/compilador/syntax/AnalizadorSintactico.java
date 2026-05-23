@@ -505,26 +505,10 @@ public class AnalizadorSintactico {
      */
     private NodoAST condicion() {
 
-        Token token = tokenActual();
-        String lexema = token.getLexema().toUpperCase();
+        // Puede ser una comparacion normal (i < 5), una propiedad booleana
+        // (VACIA EN pila) o una propiedad comparada (VACIA EN pila == 0).
 
         // CASO 1: Propiedades (VACIA EN p1)
-        if (esPropiedad(lexema)) {
-
-            int linea = token.getLinea();
-
-            consumir(lexema);
-            consumir("EN");
-
-            String id = tokenActual().getLexema();
-            consumir("IDENTIFICADOR");
-
-            NodoAST nodo = new NodoAST(lexema, "CONDICION_PROPIEDAD", linea);
-            nodo.agregarHijo(new NodoAST(id, "ID_ESTRUCTURA", linea));
-
-            return nodo;
-        }
-
         // CASO 2: Condición relacional
         NodoAST izquierda = expresion();
 

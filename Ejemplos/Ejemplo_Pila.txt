@@ -1,0 +1,49 @@
+// ============================================================
+// EJEMPLO: PILA (Stack - LIFO)
+// Operaciones: APILAR, DESAPILAR, TOPE, VACIA, LLENA, TAMANO
+// ============================================================
+
+CREAR PILA miPila TAMANO 5;
+
+// --- APILAR elementos ---
+APILAR 10 EN miPila;
+APILAR 20 EN miPila;
+APILAR 30 EN miPila;
+APILAR 40 EN miPila;
+APILAR 50 EN miPila;
+
+// --- Consultar TAMANO ---
+CREAR NUMERO tam = 0;
+tam = TAMANO EN miPila;
+MOSTRAR tam;
+
+// --- Verificar si esta LLENA ---
+IF (LLENA EN miPila) {
+    MOSTRAR 1;
+}
+
+// --- Intentar apilar cuando esta llena (desbordamiento ignorado) ---
+APILAR 99 EN miPila;
+
+// --- DESAPILAR y mostrar cada tope ---
+DESAPILAR EN miPila;
+MOSTRAR TOPE EN miPila;
+
+DESAPILAR EN miPila;
+MOSTRAR TOPE EN miPila;
+
+DESAPILAR EN miPila;
+MOSTRAR TOPE EN miPila;
+
+// --- Vaciar la pila con un bucle ---
+CREAR NUMERO i = 0;
+FOR (i = 0; i < 2; i = i + 1) {
+    DESAPILAR EN miPila;
+}
+
+// --- Verificar si esta VACIA ---
+IF (VACIA EN miPila) {
+    MOSTRAR 0;
+}
+
+MOSTRAR 999;

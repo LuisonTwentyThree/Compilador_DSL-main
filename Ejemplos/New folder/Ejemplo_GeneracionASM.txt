@@ -1,0 +1,88 @@
+// ============================================
+// EJEMPLO DE PROGRAMA DSL
+// Demostración de Generación de Ensamblador
+// ============================================
+
+// Crear árbol binario
+estructura arbol listaArbol;
+
+// Operaciones de inserción
+AGREGARNODO 50 "raiz" EN arbol;
+AGREGARNODO 30 "izquierda" EN arbol;
+AGREGARNODO 70 "derecha" EN arbol;
+AGREGARNODO 20 "sub-izquierda" EN arbol;
+AGREGARNODO 40 "sub-derecha-izquierda" EN arbol;
+AGREGARNODO 60 "sub-derecha-izquierda" EN arbol;
+AGREGARNODO 80 "sub-derecha" EN arbol;
+
+// Mostrar tamaño
+MOSTRAR "Árbol con 7 nodos creado";
+
+// Crear lista enlazada
+estructura lista listaEnlazada;
+
+
+//crea arbol
+AGREGARNODO 1 50 EN arbol;
+AGREGARNODO 1 30 EN arbol;
+AGREGARNODO 1 70 EN arbol;
+AGREGARNODO 1 20 EN arbol;
+AGREGARNODO 2 40 EN arbol;
+
+MOSTRAR PREORDEN EN arbol;
+MOSTRAR INORDEN EN arbol;
+MOSTRAR POSTORDEN EN arbol;
+MOSTRAR RECORRIDOPORNIVELES EN arbol;
+
+
+
+
+
+// Insertar en lista con clave-valor
+INSERTAR 100 "primer" EN lista;
+INSERTAR 200 "segundo" EN lista;
+INSERTAR 150 "tercero" EN lista;
+
+MOSTRAR "Lista con 3 nodos creada";
+
+// Crear pila
+estructura pila pilaSimple;
+
+// Operaciones en pila
+APILAR 10 EN pila;
+APILAR 20 EN pila;
+APILAR 30 EN pila;
+
+MOSTRAR "Pila con 3 elementos";
+
+// Obtener tope
+tope = TOPE EN pila;
+MOSTRAR tope;
+
+// Crear cola
+estructura cola colaFIFO;
+
+// Operaciones en cola
+ENCOLAR 1 EN cola;
+ENCOLAR 2 EN cola;
+ENCOLAR 3 EN cola;
+
+MOSTRAR "Cola con 3 elementos";
+
+// Verificar si está vacía
+vacia = VACIA EN cola;
+
+SI (vacia == 0) ENTONCES
+    MOSTRAR "Cola no está vacía";
+SINO
+    MOSTRAR "Cola está vacía";
+FIN_SI
+
+// Desapilar de pila
+SI (VACIA EN pila) == 0 ENTONCES
+    DESAPILAR EN pila;
+    MOSTRAR "Elemento desapilado";
+FIN_SI
+
+// Búsqueda en árbol
+MOSTRAR "Fin de programa";

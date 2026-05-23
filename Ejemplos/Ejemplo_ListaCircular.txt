@@ -1,0 +1,77 @@
+// ============================================================
+// EJEMPLO: LISTA CIRCULAR (Circular Linked List)
+// Operaciones: INSERTAR_INICIO, INSERTAR_FINAL, INSERTAR_EN_POSICION,
+//              ELIMINAR_INICIO, ELIMINAR_FINAL, ELIMINAR, ELIMINAR_POSICION,
+//              BUSCAR, TAMANO
+// ============================================================
+
+CREAR LISTA_CIRCULAR miListaC;
+
+// --- VACIA al inicio ---
+IF (VACIA EN miListaC) {
+    MOSTRAR 0;
+}
+
+// --- Insertar al FINAL (el ultimo apunta al primero) ---
+INSERTAR_FINAL 100 EN miListaC;
+INSERTAR_FINAL 200 EN miListaC;
+INSERTAR_FINAL 300 EN miListaC;
+INSERTAR_FINAL 400 EN miListaC;
+
+// Circular: 100 -> 200 -> 300 -> 400 -> (vuelve a 100)
+
+// --- Insertar al INICIO ---
+INSERTAR_INICIO 50 EN miListaC;
+
+// Circular: 50 -> 100 -> 200 -> 300 -> 400 -> (vuelve a 50)
+
+// --- Insertar en posicion ---
+//INSERTAR_EN_POSICION 2 150 EN miListaC;
+
+// Circular: 50 -> 100 -> 150 -> 200 -> 300 -> 400 -> (vuelve a 50)
+
+// --- TAMANO ---
+CREAR NUMERO tam = 0;
+tam = TAMANO EN miListaC;
+MOSTRAR tam;
+
+// --- BUSCAR en la lista circular ---
+BUSCAR 200 EN miListaC;
+BUSCAR 999 EN miListaC;
+
+// --- ELIMINAR por valor ---
+ELIMINAR 150 EN miListaC;
+
+// Circular: 50 -> 100 -> 200 -> 300 -> 400 -> (vuelve a 50)
+
+// --- ELIMINAR por posicion ---
+ELIMINAR_POSICION 0 EN miListaC;
+
+// Circular: 100 -> 200 -> 300 -> 400 -> (vuelve a 100)
+
+// --- ELIMINAR INICIO y FINAL ---
+ELIMINAR_INICIO EN miListaC;
+ELIMINAR_FINAL EN miListaC;
+
+// Circular: 200 -> 300 -> (vuelve a 200)
+
+// --- Tamano tras eliminaciones ---
+tam = TAMANO EN miListaC;
+MOSTRAR tam;
+
+// --- Insertar en bucle ---
+CREAR NUMERO v = 0;
+FOR (v = 1; v < 4; v = v + 1) {
+    INSERTAR_FINAL v EN miListaC;
+}
+
+// --- Vaciar ---
+WHILE (VACIA EN miListaC) {
+    ELIMINAR_INICIO EN miListaC;
+}
+
+IF (VACIA EN miListaC) {
+    MOSTRAR 0;
+}
+
+MOSTRAR 999;

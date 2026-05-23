@@ -1,0 +1,54 @@
+// ============================================================
+// EJEMPLO: BICOLA (Double-Ended Queue - Deque)
+// Operaciones: ENCOLAR, DESENCOLAR, FRENTE, VACIA, LLENA, TAMANO
+// ============================================================
+
+CREAR BICOLA miBicola TAMANO 6;
+
+// --- Verificar VACIA al inicio ---
+IF (VACIA EN miBicola) {
+    MOSTRAR 0;
+}
+
+// --- ENCOLAR desde el frente simulando insercion por ambos extremos ---
+ENCOLAR 30 EN miBicola;
+ENCOLAR 20 EN miBicola;
+ENCOLAR 10 EN miBicola;
+
+// --- Agregar al otro extremo conceptualmente ---
+ENCOLAR 40 EN miBicola;
+ENCOLAR 50 EN miBicola;
+ENCOLAR 60 EN miBicola;
+
+// --- Verificar LLENA ---
+IF (LLENA EN miBicola) {
+    MOSTRAR 1;
+}
+
+// --- Consultar TAMANO ---
+CREAR NUMERO tam = 0;
+tam = TAMANO EN miBicola;
+MOSTRAR tam;
+
+// --- Extraer elementos en orden FIFO ---
+MOSTRAR FRENTE EN miBicola;
+DESENCOLAR EN miBicola;
+
+MOSTRAR FRENTE EN miBicola;
+DESENCOLAR EN miBicola;
+
+MOSTRAR FRENTE EN miBicola;
+DESENCOLAR EN miBicola;
+
+// --- Seguir vaciando ---
+CREAR NUMERO i = 0;
+FOR (i = 0; i < 3; i = i + 1) {
+    DESENCOLAR EN miBicola;
+}
+
+// --- Confirmar vacia ---
+IF (VACIA EN miBicola) {
+    MOSTRAR 0;
+}
+
+MOSTRAR 999;

@@ -17,8 +17,10 @@ import compilador.core.Cuadruplo;
  * - plegado de constantes aritmeticas y comparaciones
  * - simplificaciones algebraicas seguras
  * - propagacion de copias/constantes sin cruzar saltos ni etiquetas
+ * - reutilizacion de subexpresiones comunes dentro de bloques basicos
  * - simplificacion de saltos con condiciones constantes
  * - eliminacion de saltos redundantes e instrucciones inalcanzables simples
+ * - eliminacion de etiquetas sin referencias
  * - eliminacion de codigo muerto solo para temporales
  */
 public class OptimizadorCGI {
@@ -43,8 +45,10 @@ public class OptimizadorCGI {
             actual = simplificarOperaciones(actual);
             actual = propagarCopiasYConstantes(actual);
             actual = simplificarOperaciones(actual);
+            actual = eliminarSubexpresionesComunes(actual);
             actual = simplificarSaltos(actual);
             actual = eliminarCodigoInalcanzable(actual);
+            actual = eliminarEtiquetasSinUso(actual);
             actual = eliminarCodigoMuerto(actual);
 
             if (antes.equals(firma(actual))) {
@@ -86,12 +90,62 @@ public class OptimizadorCGI {
                 continue;
             }
 
+            if (isComparisonOperator(op) && mismoValor(c.argumento1, c.argumento2)) {
+                String resultado = ("==".equals(op) || "<=".equals(op) || ">=".equals(op)) ? "1" : "0";
+                salida.add(new Cuadruplo("=", resultado, "", c.resultado));
+                continue;
+            }
+
             if (("IF_FALSE".equals(op) || "IF_TRUE".equals(op)) && isNumeric(c.argumento1)) {
                 boolean condicion = Long.parseLong(c.argumento1) != 0;
                 if (("IF_FALSE".equals(op) && !condicion) || ("IF_TRUE".equals(op) && condicion)) {
                     salida.add(new Cuadruplo("GOTO", "", "", c.resultado));
                 }
                 continue;
+            }
+
+            if (esAsignacionIdenticaConsecutiva(salida, c)) {
+                continue;
+            }
+
+            salida.add(c);
+        }
+
+        return salida;
+    }
+
+    private List<Cuadruplo> eliminarSubexpresionesComunes(List<Cuadruplo> codigo) {
+        // Reutiliza calculos puros repetidos dentro del mismo bloque basico.
+        // Se reinicia en etiquetas, saltos y operaciones con efectos secundarios.
+        Map<String, String> expresiones = new HashMap<>();
+        List<Cuadruplo> salida = new ArrayList<>();
+
+        for (Cuadruplo original : codigo) {
+            if (original == null || original.operador == null) {
+                continue;
+            }
+
+            Cuadruplo c = copiar(original);
+
+            if ("ETIQUETA".equals(c.operador) || "GOTO".equals(c.operador)
+                    || c.operador.startsWith("IF") || esEfectoSecundario(c)) {
+                expresiones.clear();
+                salida.add(c);
+                continue;
+            }
+
+            if (esIdentificador(c.resultado)) {
+                invalidarExpresionesCon(c.resultado, expresiones);
+            }
+
+            if (esOperacionPura(c) && esIdentificador(c.resultado)) {
+                String clave = claveExpresion(c);
+                String resultadoPrevio = expresiones.get(clave);
+                if (resultadoPrevio != null && !mismoValor(resultadoPrevio, c.resultado)) {
+                    salida.add(new Cuadruplo("=", resultadoPrevio, "", c.resultado));
+                    continue;
+                }
+                expresiones.put(clave, c.resultado);
             }
 
             salida.add(c);
@@ -291,7 +345,7 @@ public class OptimizadorCGI {
             }
 
             boolean conservar = esControl(c) || esEfectoSecundario(c)
-                    || c.resultado == null || usados.contains(c.resultado);
+                    || c.resultado == null || !esTemporal(c.resultado) || usados.contains(c.resultado);
 
             if (conservar) {
                 salida.add(0, c);
@@ -306,6 +360,32 @@ public class OptimizadorCGI {
         return salida;
     }
 
+    private List<Cuadruplo> eliminarEtiquetasSinUso(List<Cuadruplo> codigo) {
+        Set<String> etiquetasUsadas = new HashSet<>();
+        for (Cuadruplo c : codigo) {
+            if (c != null && c.operador != null
+                    && ("GOTO".equals(c.operador) || c.operador.startsWith("IF"))
+                    && !vacio(c.resultado)) {
+                etiquetasUsadas.add(c.resultado);
+            }
+        }
+
+        List<Cuadruplo> salida = new ArrayList<>();
+        boolean anteriorFueGoto = false;
+        for (Cuadruplo c : codigo) {
+            if (c == null) {
+                continue;
+            }
+            if ("ETIQUETA".equals(c.operador) && !etiquetasUsadas.contains(c.resultado) && !anteriorFueGoto) {
+                anteriorFueGoto = false;
+                continue;
+            }
+            salida.add(c);
+            anteriorFueGoto = "GOTO".equals(c.operador);
+        }
+        return salida;
+    }
+
     private Long calcularAritmetica(String op, long v1, long v2) {
         switch (op) {
             case "+": return v1 + v2;
@@ -314,6 +394,20 @@ public class OptimizadorCGI {
             case "/": return v2 == 0 ? null : v1 / v2;
             default: return null;
         }
+    }
+
+    private boolean esAsignacionIdenticaConsecutiva(List<Cuadruplo> salida, Cuadruplo actual) {
+        if (salida.isEmpty() || actual == null || !"=".equals(actual.operador)) {
+            return false;
+        }
+
+        Cuadruplo anterior = salida.get(salida.size() - 1);
+        return anterior != null
+                && "=".equals(anterior.operador)
+                && mismoValor(anterior.resultado, actual.resultado)
+                && mismoValor(anterior.argumento1, actual.argumento1)
+                && vacio(anterior.argumento2)
+                && vacio(actual.argumento2);
     }
 
     private boolean calcularComparacion(String op, long v1, long v2) {
@@ -340,6 +434,19 @@ public class OptimizadorCGI {
         if (esIdentificador(valor)) {
             usados.add(valor);
         }
+    }
+
+    private void invalidarExpresionesCon(String valor, Map<String, String> expresiones) {
+        expresiones.entrySet().removeIf(entry -> {
+            String clave = entry.getKey();
+            String resultado = entry.getValue();
+            return mismoValor(valor, resultado) || claveContieneValor(clave, valor);
+        });
+    }
+
+    private boolean claveContieneValor(String clave, String valor) {
+        String buscado = "|" + valor + "|";
+        return clave != null && (clave.contains(buscado) || clave.endsWith("|" + valor));
     }
 
     private String resolver(String valor, Map<String, String> reemplazos) {
@@ -392,6 +499,29 @@ public class OptimizadorCGI {
     private boolean isComparisonOperator(String op) {
         return "<".equals(op) || ">".equals(op) || "==".equals(op) || "!=".equals(op)
                 || "<=".equals(op) || ">=".equals(op);
+    }
+
+    private boolean esOperacionPura(Cuadruplo c) {
+        return c != null && c.operador != null
+                && (isArithmeticOperator(c.operador) || isComparisonOperator(c.operador));
+    }
+
+    private String claveExpresion(Cuadruplo c) {
+        String op = c.operador;
+        String a = valor(c.argumento1);
+        String b = valor(c.argumento2);
+
+        if (esConmutativa(op) && a.compareTo(b) > 0) {
+            String tmp = a;
+            a = b;
+            b = tmp;
+        }
+
+        return op + "|" + a + "|" + b;
+    }
+
+    private boolean esConmutativa(String op) {
+        return "+".equals(op) || "*".equals(op) || "==".equals(op) || "!=".equals(op);
     }
 
     private boolean esValorPropagable(String valor) {

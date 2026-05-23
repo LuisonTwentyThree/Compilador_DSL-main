@@ -442,6 +442,8 @@ public class AnalizadorSemantico {
                         || verbo.equals("ELIMINAR_POSICION")
                         || verbo.equals("BUSCAR")
                         || verbo.equals("RECORRER")
+                        || verbo.equals("VACIA")
+                        || verbo.equals("LLENA")
                         || verbo.equals("TAMANO")
                         || verbo.equals("MOSTRAR");
 
@@ -463,6 +465,8 @@ public class AnalizadorSemantico {
                         || verbo.equals("BUSCAR")
                         || verbo.equals("RECORRERADELANTE")
                         || verbo.equals("RECORRERATRAS")
+                        || verbo.equals("VACIA")
+                        || verbo.equals("LLENA")
                         || verbo.equals("TAMANO")
                         || verbo.equals("MOSTRAR");
 

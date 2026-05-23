@@ -1,0 +1,73 @@
+// ============================================================
+// EJEMPLO: LISTA DOBLE ENLAZADA (Doubly Linked List)
+// Operaciones: INSERTAR_INICIO, INSERTAR_FINAL, INSERTAR_EN_POSICION,
+//              ELIMINAR_INICIO, ELIMINAR_FINAL, ELIMINAR, ELIMINAR_POSICION,
+//              BUSCAR, RECORRERADELANTE, RECORRERATRAS, TAMANO
+// ============================================================
+
+CREAR LISTA_DOBLE_ENLAZADA miListaD;
+
+// --- Insertar elementos ---
+INSERTAR_FINAL 10 EN miListaD;
+INSERTAR_FINAL 20 EN miListaD;
+INSERTAR_FINAL 30 EN miListaD;
+INSERTAR_FINAL 40 EN miListaD;
+INSERTAR_FINAL 50 EN miListaD;
+
+// Nodos: 10 <-> 20 <-> 30 <-> 40 <-> 50
+
+// --- Insertar al INICIO ---
+INSERTAR_INICIO 5 EN miListaD;
+
+// Nodos: 5 <-> 10 <-> 20 <-> 30 <-> 40 <-> 50
+
+// --- Insertar en posicion intermedia ---
+INSERTAR_EN_POSICION 3 25 EN miListaD;
+
+// Nodos: 5 <-> 10 <-> 20 <-> 25 <-> 30 <-> 40 <-> 50
+
+// --- Consultar TAMANO ---
+CREAR NUMERO tam = 0;
+tam = TAMANO EN miListaD;
+MOSTRAR tam;
+
+// --- BUSCAR valores ---
+BUSCAR 25 EN miListaD;
+BUSCAR 999 EN miListaD;
+
+// --- Recorrer ADELANTE (inicio a fin) ---
+RECORRERADELANTE EN miListaD;
+
+// --- Recorrer ATRAS (fin a inicio) ---
+RECORRERATRAS EN miListaD;
+
+// --- ELIMINAR por valor ---
+ELIMINAR 25 EN miListaD;
+
+// Nodos: 5 <-> 10 <-> 20 <-> 30 <-> 40 <-> 50
+
+// --- ELIMINAR por posicion ---
+ELIMINAR_POSICION 2 EN miListaD;
+
+// Nodos: 5 <-> 10 <-> 30 <-> 40 <-> 50
+
+// --- ELIMINAR extremos ---
+ELIMINAR_INICIO EN miListaD;
+ELIMINAR_FINAL EN miListaD;
+
+// Nodos: 10 <-> 30 <-> 40
+
+// --- Recorrer en ambas direcciones tras eliminaciones ---
+RECORRERADELANTE EN miListaD;
+RECORRERATRAS EN miListaD;
+
+// --- Vaciar con DO-WHILE ---
+DO {
+    ELIMINAR_INICIO EN miListaD;
+} WHILE (VACIA EN miListaD == 0)
+
+IF (VACIA EN miListaD) {
+    MOSTRAR 0;
+}
+
+MOSTRAR 999;
