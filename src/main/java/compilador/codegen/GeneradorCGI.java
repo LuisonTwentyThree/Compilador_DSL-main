@@ -2,7 +2,6 @@ package compilador.codegen;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Stack;
 
 import compilador.core.Cuadruplo;
 import compilador.core.NodoAST;
@@ -18,35 +17,49 @@ public class GeneradorCGI {
     // recibe el AST y lo convierte en cuadruplos de tres direcciones.
     // Ejemplo: resultado = 5 + 3 se vuelve algo parecido a:
     // (+, 5, 3, T1) y luego (=, T1, , resultado).
-    private List<Cuadruplo> codigo;
-    private int contadorTemporales;
-    private int contadorEtiquetas;
-    private Stack<String> pilaTemporales;
+    //
+    // Forma mental para estudiarlo:
+    // AST: representa la estructura del programa.
+    // CGI: representa acciones simples en cuadruplos.
+    // ASM: toma esos cuadruplos y los convierte a instrucciones de maquina.
+    private List<Cuadruplo> codigo;// Lista de cuadruplos generados; cada cuadruplo es una instrucción de tres direcciones.
+    private int contadorTemporales;//   Contador para generar nombres únicos de temporales (T1, T2, T3, ...)   
+    private int contadorEtiquetas;//    Contador para generar nombres únicos de etiquetas (L1, L2, L3, ...)
 
+// El constructor inicializa la lista de código y los contadores.
     public GeneradorCGI() {
-        this.codigo = new ArrayList<>();
-        this.contadorTemporales = 1;
-        this.contadorEtiquetas = 1;
-        this.pilaTemporales = new Stack<>();
+        this.codigo = new ArrayList<>();// Lista vacía al inicio; se llenará con cuadruplos a medida que se recorre el AST.
+        this.contadorTemporales = 1;// Comienza en 1 para que el primer temporal sea T1, luego T2, etc.
+        this.contadorEtiquetas = 1;// Comienza en 1 para que la primera etiqueta sea L1, luego L2, etc.
+
     }
 
     /**
      * Genera un nuevo temporal único
      */
     private String nuevoTemporal() {
+        // Un temporal guarda resultados intermedios. Por ejemplo:
+        // a = (5 + 3) * 2
+        // se puede partir como T1 = 5 + 3, T2 = T1 * 2, a = T2.
         return "T" + (contadorTemporales++);
     }
 
     /**
      * Genera una nueva etiqueta única
-     */
+     */ // Las etiquetas son usadas para marcar destinos de salto en control de flujo.
     private String nuevaEtiqueta() {
+        // Las etiquetas son destinos de salto para IF, WHILE, FOR, etc.
+        // En ASM terminaran siendo marcas como L1:, L2:, ...
         return "L" + (contadorEtiquetas++);
     }
     /**
      * Agrega un cuádruplo a la lista de código generado
      */
     private void agregar(String op, String arg1, String arg2, String res) {
+        // Un cuadruplo siempre guarda cuatro campos:
+        // operador, argumento1, argumento2 y resultado.
+        // Ejemplo interno: (APILAR, 5, "", miPila)
+        // Ejemplo mostrado por toString(): miPila = 5 APILAR
         codigo.add(new Cuadruplo(op, arg1, arg2, res));
     }
     /**
@@ -97,6 +110,7 @@ public class GeneradorCGI {
         if (tipo.equals("RAIZ") || tipo.equals("LISTA SENTENCIAS") || tipo.equals("BLOQUE_CODIGO")) {
             // Los nodos contenedores no generan cuadruplos por si mismos;
             // solo visitan sus hijos en orden.
+            // Esto conserva el mismo orden en que escribiste el programa DSL.
             if (nodo.getHijos() != null) {
                 for (NodoAST hijo : nodo.getHijos()) {
                     recorrerNodo(hijo);
@@ -107,9 +121,12 @@ public class GeneradorCGI {
 
         // ===== LITERALES Y IDENTIFICADORES =====
         if (tipo.equals("NUMERO") || tipo.equals("LITERAL_NUMERICA")) {
+            // Los literales no necesitan cuadruplo: ya son un valor usable.
             return valor;
         }
         if (tipo.equals("CADENA") || tipo.equals("LITERAL_CADENA")) {
+            // La cadena se devuelve tal cual para que una instruccion superior
+            // decida si la asigna, imprime o usa de otra forma.
             return valor;
         }
         if (tipo.equals("BOOLEANO")) {
@@ -117,6 +134,8 @@ public class GeneradorCGI {
         }
         if (tipo.equals("IDENTIFICADOR") || tipo.equals("ID") || 
             tipo.equals("ID_VAR") || tipo.equals("ID_ESTRUCTURA") || tipo.equals("GRAFO")) {
+            // Un identificador devuelve su nombre; otra operacion lo usara
+            // como argumento o como destino.
             return valor;
         }
 
@@ -138,11 +157,15 @@ public class GeneradorCGI {
 
                 // Es una estructura de datos con TAMANO
                 if (tipoValNodo.equals("TAMANO")) {
+                    // ALLOC no reserva memoria real aqui; deja una marca para
+                    // que el backend ASM declare la estructura con ese tamano.
                     String tamano = nodoVal.getValor();
                     agregar("ALLOC", tamano, tipoVar, idVar);
                 } else {
                     // Es una inicialización de variable primitiva
                     String dirVal = recorrerNodo(nodoVal);
+                    // Si la expresion produjo un temporal, se asigna ese temporal.
+                    // Si era un numero o identificador simple, se asigna directo.
                     agregar("=", dirVal, "", idVar);
                 }
             } else if (tipoVar.equals("PILA") || tipoVar.equals("PILA_CIRCULAR")
@@ -150,6 +173,7 @@ public class GeneradorCGI {
                     || tipoVar.equals("LISTA_ENLAZADA") || tipoVar.equals("LISTA_CIRCULAR")
                     || tipoVar.equals("LISTA_DOBLE_ENLAZADA") || tipoVar.equals("ARBOL_BINARIO")
                     || tipoVar.equals("GRAFO") || tipoVar.equals("TABLA_HASH")) {
+                // Si la estructura no trae TAMANO explicito, se usa capacidad 100.
                 agregar("ALLOC", "100", tipoVar, idVar);
             }
             return "";
@@ -205,6 +229,8 @@ public class GeneradorCGI {
                 String cIzq = recorrerNodo(nodo.getHijos().get(0));
                 String cDer = recorrerNodo(nodo.getHijos().get(1));
                 String tCond = nuevoTemporal();
+                // Las condiciones producen 0 o 1 en un temporal.
+                // Luego IF_FALSE/IF_TRUE usan ese temporal para decidir el salto.
                 agregar(valor, cIzq, cDer, tCond);
                 return tCond;
             }
@@ -270,6 +296,8 @@ public class GeneradorCGI {
         if (nodo.getHijos() != null) {
             String resultado = "";
             for (NodoAST hijo : nodo.getHijos()) {
+                // Si aparece un nodo que no tiene caso propio, al menos se
+                // intenta traducir a partir de sus hijos.
                 resultado = recorrerNodo(hijo);
             }
             return resultado;
@@ -292,6 +320,8 @@ public class GeneradorCGI {
         String der = recorrerNodo(nodo.getHijos().get(1));
         String tRes = nuevoTemporal();
         
+        // Aqui nace el codigo de tres direcciones clasico:
+        // T1 = izq operador der
         agregar(operador, izq, der, tRes);
         return tRes;
     }
@@ -352,6 +382,10 @@ public class GeneradorCGI {
             // Solo la estructura (DESAPILAR EN pila, DESENCOLAR EN cola)
             // Para operaciones que extraen datos, verificar que no esté vacía
             if (operUpper.equals("DESAPILAR") || operUpper.equals("DESENCOLAR")) {
+                // Antes de extraer, genera una verificacion:
+                // T = VACIA estructura
+                // IF_FALSE T GOTO continuar
+                // ERROR ...
                 String tVerificacion = nuevoTemporal();
                 agregar("VACIA", idEstructura, "", tVerificacion);
                 String lContinuar = nuevaEtiqueta();
@@ -363,11 +397,13 @@ public class GeneradorCGI {
         } else if (idxEstructura == 1) {
             // Un argumento + estructura (APILAR 5 EN pila, ELIMINAR_FINAL EN lista)
             String arg1 = recorrerNodo(nodo.getHijos().get(0));
+            // Ejemplo interno generado: (APILAR, 5, "", pila)
             agregar(operUpper, arg1, "", idEstructura);
         } else if (idxEstructura >= 2) {
             // Dos o más argumentos + estructura (INSERTAR clave valor EN lista, AGREGARNODO clave valor EN arbol)
             String arg1 = recorrerNodo(nodo.getHijos().get(0));
             String arg2 = recorrerNodo(nodo.getHijos().get(1));
+            // Ejemplo interno generado: (INSERTAR, clave, valor, lista)
             agregar(operUpper, arg1, arg2, idEstructura);
         }
 
@@ -389,6 +425,7 @@ public class GeneradorCGI {
         String lFinSi = nuevaEtiqueta();
 
         // Generar: IF_FALSE condicion GOTO lFalso
+        // Si la condicion vale 0, se salta al bloque falso o al final del IF.
         agregar("IF_FALSE", condicion, "GOTO", lFalso);
 
         // Procesar el bloque del IF
@@ -398,6 +435,8 @@ public class GeneradorCGI {
 
         // Si hay ELSE
         if (nodo.getHijos().size() > 2) {
+            // Con ELSE se necesita saltar el bloque falso cuando ya se ejecuto
+            // el bloque verdadero.
             agregar("GOTO", "", "", lFinSi);
             agregar("ETIQUETA", "", "", lFalso);
             recorrerNodo(nodo.getHijos().get(2));
@@ -444,6 +483,13 @@ public class GeneradorCGI {
         String lInicio = nuevaEtiqueta();
         String lFin = nuevaEtiqueta();
 
+        // WHILE se traduce como:
+        // L_inicio:
+        //   condicion
+        //   IF_FALSE condicion GOTO L_fin
+        //   cuerpo
+        //   GOTO L_inicio
+        // L_fin:
         agregar("ETIQUETA", "", "", lInicio);
 
         // Procesar condición
@@ -474,6 +520,8 @@ public class GeneradorCGI {
         String lFin = nuevaEtiqueta();
 
         // Inicialización: i = 0
+        // FOR se reordena a una forma parecida a WHILE:
+        // inicializacion; etiqueta; condicion; cuerpo; incremento; salto.
         recorrerNodo(nodo.getHijos().get(0));
 
         agregar("ETIQUETA", "", "", lInicio);
@@ -500,6 +548,8 @@ public class GeneradorCGI {
     private String procesarDoWhile(NodoAST nodo) {
         String lInicio = nuevaEtiqueta();
 
+        // DO-WHILE ejecuta el cuerpo primero y revisa la condicion al final.
+        // Por eso usa IF_TRUE para regresar al inicio si la condicion se cumple.
         agregar("ETIQUETA", "", "", lInicio);
 
         // Procesar cuerpo

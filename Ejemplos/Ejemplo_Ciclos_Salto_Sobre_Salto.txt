@@ -1,0 +1,44 @@
+// ============================================================
+// EJEMPLO: CICLOS + SALTO SOBRE SALTO PARA OPTIMIZACION
+// ============================================================
+
+// pila
+CREAR PILA miPila TAMANO 5;
+CREAR NUMERO i = 0;
+
+FOR (i = 0; i < 5; i = i + 1) {
+    APILAR i EN miPila;
+}
+
+MOSTRAR TOPE EN miPila;
+
+
+// cola
+CREAR COLA miCola TAMANO 5;
+CREAR NUMERO j = 0;
+
+FOR (j = 0; j < 5; j = j + 1) {
+    ENCOLAR j EN miCola;
+}
+
+MOSTRAR FRENTE EN miCola;
+
+WHILE (VACIA EN miCola == 0) {
+    DESENCOLAR EN miCola;
+}
+
+
+// ============================================================
+// BLOQUE PARA MOSTRAR OPTIMIZACION DE SALTO SOBRE SALTO
+// ============================================================
+// Esta condicion siempre es falsa.
+// En codigo intermedio se genera un IF_FALSE que salta a una etiqueta.
+// Como el bloque nunca se ejecuta, el optimizador puede eliminar el
+// codigo inalcanzable y despues quitar el GOTO que cae justo en la etiqueta.
+
+IF (0 == 1) {
+    MOSTRAR 999;
+}
+
+MOSTRAR 100;
+

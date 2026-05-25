@@ -1146,51 +1146,6 @@ public class GeneradorEnsambladorGrafico {
     }
 
     private void agregarRutinasBase() {
-        emitir("DIBUJAR_PIXEL proc");
-        emitir("    push ax");
-        emitir("    push bx");
-        emitir("    mov ah, 0Ch");
-        emitir("    mov bh, 00h");
-        emitir("    int 10h");
-        emitir("    pop bx");
-        emitir("    pop ax");
-        emitir("    ret");
-        emitir("DIBUJAR_PIXEL endp");
-        emitir("");
-        emitir("DIBUJAR_RECTANGULO proc");
-        emitir("    push ax");
-        emitir("    push bx");
-        emitir("    push cx");
-        emitir("    push dx");
-        emitir("    push si");
-        emitir("    push di");
-        emitir("    mov [rect_x], cx");
-        emitir("    mov [rect_y], dx");
-        emitir("    mov [rect_w], si");
-        emitir("    mov [rect_h], di");
-        emitir("    mov [rect_color], al");
-        emitir("dr_fila:");
-        emitir("    mov cx, [rect_x]");
-        emitir("    mov si, [rect_w]");
-        emitir("dr_columna:");
-        emitir("    mov dx, [rect_y]");
-        emitir("    mov al, [rect_color]");
-        emitir("    call DIBUJAR_PIXEL");
-        emitir("    inc cx");
-        emitir("    dec si");
-        emitir("    jnz dr_columna");
-        emitir("    inc word ptr [rect_y]");
-        emitir("    dec word ptr [rect_h]");
-        emitir("    jnz dr_fila");
-        emitir("    pop di");
-        emitir("    pop si");
-        emitir("    pop dx");
-        emitir("    pop cx");
-        emitir("    pop bx");
-        emitir("    pop ax");
-        emitir("    ret");
-        emitir("DIBUJAR_RECTANGULO endp");
-        emitir("");
         emitir("LIMPIAR_PANTALLA proc");
         emitir("    push ax");
         emitir("    mov ax, 0013h");
@@ -1876,11 +1831,6 @@ public class GeneradorEnsambladorGrafico {
                     sb.append("    gfx_q_front dw 0\n");
                     sb.append("    gfx_q_rear dw 0\n");
                 }
-                sb.append("    rect_x dw 0\n");
-                sb.append("    rect_y dw 0\n");
-                sb.append("    rect_w dw 0\n");
-                sb.append("    rect_h dw 0\n");
-                sb.append("    rect_color db 0\n");
                 for (Map.Entry<String, String> entry : estructurasTipo.entrySet()) {
                     String n = entry.getKey();
                     String t = entry.getValue();

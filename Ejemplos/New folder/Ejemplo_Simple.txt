@@ -2,27 +2,21 @@
 // EJEMPLO SIMPLE - INICIO RECOMENDADO
 // Prueba básica del compilador y generación de código
 // ============================================================
-
 // Variables numéricas
 CREAR NUMERO x = 10;
 CREAR NUMERO y = 5;
 CREAR NUMERO suma = 0;
-
 // Operación aritmética
 suma = x + y;
-
 // Salida
 MOSTRAR suma;
-
 // Más operaciones
 CREAR NUMERO resta = 0;
 resta = x - y;
 MOSTRAR resta;
-
 CREAR NUMERO mult = 0;
 mult = x * y;
 MOSTRAR mult;
-
 // Variable de texto
 CREAR TEXTO texto = "Código Intermedio OK";
 MOSTRAR texto;

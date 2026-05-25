@@ -22,7 +22,6 @@ APILAR 15 EN pilaC;
 APILAR 25 EN pilaC;
 
 MOSTRAR TOPE EN pilaC;
-
 DESAPILAR EN pilaC;
 APILAR 35 EN pilaC;
 
@@ -222,8 +221,6 @@ DO {
     ELIMINAR_INICIO EN miLista;
 } WHILE (VACIA EN miLista == 0);
 
-
-
 CREAR COLA miCola TAMANO 5;
 CREAR NUMERO edad = 20;
 
@@ -232,3 +229,266 @@ IF (edad >= 18) {
 }
 
 MOSTRAR FRENTE EN miCola;
+
+
+
+//CON SALTO SOBRE SALTO 
+// ciclos + salto sobre salto
+
+CREAR PILA miPila TAMANO 5;
+CREAR NUMERO i = 0;
+
+FOR (i = 0; i < 5; i = i + 1) {
+    APILAR i EN miPila;
+}
+
+MOSTRAR TOPE EN miPila;
+
+
+// cola
+CREAR COLA miCola TAMANO 5;
+CREAR NUMERO j = 0;
+
+FOR (j = 0; j < 5; j = j + 1) {
+    ENCOLAR j EN miCola;
+}
+
+MOSTRAR FRENTE EN miCola;
+
+WHILE (VACIA EN miCola == 0) {
+    DESENCOLAR EN miCola;
+}
+
+// ejemplo para mostrar salto sobre salto optimizado
+IF (0 == 1) {
+    MOSTRAR 999;
+}
+
+MOSTRAR 100;
+//-------------------------------------------------------------
+
+
+
+//----------------------------------------------------------------
+
+// ejemplo claro de optimizacion + ASM funcional
+
+CREAR NUMERO x = 10;
+CREAR NUMERO y = 5;
+
+CREAR NUMERO suma = 0;
+CREAR NUMERO resta = 0;
+CREAR NUMERO mult = 0;
+CREAR NUMERO neutro1 = 0;
+CREAR NUMERO neutro2 = 0;
+CREAR NUMERO constante = 0;
+
+// operaciones con variables constantes
+suma = x + y;
+resta = x - y;
+mult = x * y;
+
+// operaciones que se simplifican algebraicamente
+neutro1 = suma + 0;
+neutro2 = mult * 1;
+
+// operacion constante directa
+constante = 20 + 30;
+
+// salida al final para no cortar la propagacion antes de tiempo
+MOSTRAR suma;
+MOSTRAR resta;
+MOSTRAR mult;
+MOSTRAR neutro1;
+MOSTRAR neutro2;
+MOSTRAR constante;
+
+
+
+
+
+
+
+
+
+Sí. Aquí tienes uno con pila, cola y lista, pero todavía con optimización clara en el CGI y ASM funcional:
+
+// ejemplo optimizacion + estructuras: pila, cola y lista
+
+CREAR NUMERO base = 10;
+CREAR NUMERO inc = 5;
+
+CREAR NUMERO valorPila = 0;
+CREAR NUMERO valorCola = 0;
+CREAR NUMERO valorLista = 0;
+CREAR NUMERO constante = 0;
+CREAR NUMERO neutro = 0;
+
+CREAR PILA miPila TAMANO 5;
+CREAR COLA miCola TAMANO 5;
+CREAR LISTA_ENLAZADA miLista TAMANO 5;
+
+// operaciones optimizables antes de usar estructuras
+valorPila = base + inc;
+valorCola = 20 + 30;
+valorLista = valorPila * 1;
+constante = 100 - 40;
+neutro = constante + 0;
+
+// uso de estructuras con valores ya calculados
+APILAR valorPila EN miPila;
+APILAR neutro EN miPila;
+
+ENCOLAR valorCola EN miCola;
+ENCOLAR constante EN miCola;
+
+INSERTAR_FINAL valorLista EN miLista;
+INSERTAR_FINAL neutro EN miLista;
+
+// salidas
+MOSTRAR TOPE EN miPila;
+MOSTRAR FRENTE EN miCola;
+MOSTRAR valorPila;
+MOSTRAR valorCola;
+MOSTRAR valorLista;
+MOSTRAR constante;
+MOSTRAR neutro;
+
+
+
+
+
+// ejemplo optimizacion + estructuras: pila, cola y lista
+
+CREAR NUMERO base = 10;
+CREAR NUMERO incremento = 5;
+
+CREAR NUMERO valorPila = 0;
+CREAR NUMERO valorCola = 0;
+CREAR NUMERO valorLista = 0;
+CREAR NUMERO constante = 0;
+CREAR NUMERO neutro = 0;
+
+CREAR PILA miPila TAMANO 5;
+CREAR COLA miCola TAMANO 5;
+CREAR LISTA_ENLAZADA miLista TAMANO 5;
+
+// operaciones optimizables antes de usar estructuras
+valorPila = base + incremento;
+valorCola = 20 + 30;
+valorLista = valorPila * 1;
+constante = 100 - 40;
+neutro = constante + 0;
+
+// uso de estructuras con valores ya calculados
+APILAR valorPila EN miPila;
+APILAR neutro EN miPila;
+
+
+INSERTAR_FINAL valorLista EN miLista;
+INSERTAR_FINAL neutro EN miLista;
+
+// salidas
+MOSTRAR TOPE EN miPila;
+MOSTRAR FRENTE EN miCola;
+//MOSTRAR valorPila;
+//MOSTRAR valorCola;
+MOSTRAR valorLista;
+//MOSTRAR constante;
+//MOSTRAR neutro;
+
+
+
+
+
+
+
+
+//-------------------------------------------------------------------ejemplos full
+
+CREAR PILA pilaOpt TAMANO 5;
+
+CREAR NUMERO basePila = 10;
+CREAR NUMERO valorPila = 0;
+CREAR NUMERO copiaPila = 0;
+
+valorPila = basePila + 5;
+copiaPila = valorPila + 0;
+
+APILAR valorPila EN pilaOpt;
+APILAR copiaPila EN pilaOpt;
+APILAR valorPila EN pilaOpt;
+
+MOSTRAR TOPE EN pilaOpt;
+MOSTRAR TAMANO EN pilaOpt;
+
+
+//---------------------------------------------------------------------------
+CREAR COLA colaOpt TAMANO 5;
+
+CREAR NUMERO baseCola = 20;
+CREAR NUMERO valorCola = 0;
+CREAR NUMERO copiaCola = 0;
+
+valorCola = baseCola + 10;
+copiaCola = valorCola * 1;
+
+ENCOLAR valorCola EN colaOpt;
+ENCOLAR copiaCola EN colaOpt;
+ENCOLAR 50 EN colaOpt;
+
+MOSTRAR FRENTE EN colaOpt;
+MOSTRAR TAMANO EN colaOpt;
+
+//--------------------------------------------------------------
+CREAR LISTA_ENLAZADA listaOpt TAMANO 10;
+
+CREAR NUMERO baseLista = 40;
+CREAR NUMERO valorLista = 0;
+CREAR NUMERO copiaLista = 0;
+
+valorLista = baseLista + 20;
+copiaLista = valorLista + 0;
+
+INSERTAR_FINAL valorLista EN listaOpt;
+INSERTAR_FINAL copiaLista EN listaOpt;
+INSERTAR_INICIO 10 EN listaOpt;
+
+MOSTRAR TAMANO EN listaOpt;
+BUSCAR 60 EN listaOpt;
+
+
+
+//con siclos y condicionales
+
+
+CREAR LISTA_ENLAZADA listaOpt TAMANO 10;
+
+CREAR NUMERO baseLista = 40;
+CREAR NUMERO valorLista = 0;
+CREAR NUMERO copiaLista = 0;
+CREAR NUMERO i = 0;
+
+valorLista = baseLista + 20;
+copiaLista = valorLista + 0;
+
+INSERTAR_FINAL valorLista EN listaOpt;
+INSERTAR_FINAL copiaLista EN listaOpt;
+INSERTAR_INICIO 10 EN listaOpt;
+
+// ciclo FOR para insertar mas valores en la lista
+FOR (i = 0; i < 3; i = i + 1) {
+    INSERTAR_FINAL i EN listaOpt;
+}
+
+// condicional sobre la estructura
+IF (VACIA EN listaOpt == 0) {
+    BUSCAR 60 EN listaOpt;
+}
+
+// ciclo WHILE para eliminar elementos mientras no este vacia
+WHILE (VACIA EN listaOpt == 0) {
+    ELIMINAR_INICIO EN listaOpt;
+}
+
+MOSTRAR TAMANO EN listaOpt;
