@@ -1,0 +1,78 @@
+// ============================================================
+// EJEMPLO: GRAFO (Graph - no dirigido)
+// Operaciones: AGREGARNODO, ELIMINARNODO, AGREGARARISTA, ELIMINARARISTA,
+//              BFS, DFS, VECINOS (via MOSTRAR)
+// Sintaxis nodo:   AGREGARNODO clave valor EN grafo;
+// Sintaxis arista: AGREGARARISTA origen destino EN grafo;
+// ============================================================
+
+CREAR GRAFO miGrafo;
+
+// --- Agregar NODOS (clave valor) ---
+AGREGARNODO 1 100 EN miGrafo;
+AGREGARNODO 2 200 EN miGrafo;
+AGREGARNODO 3 300 EN miGrafo;
+AGREGARNODO 4 400 EN miGrafo;
+AGREGARNODO 5 500 EN miGrafo;
+AGREGARNODO 6 600 EN miGrafo;
+
+// Nodos: 1(100), 2(200), 3(300), 4(400), 5(500), 6(600)
+
+// --- Agregar ARISTAS (conexiones) ---
+AGREGARARISTA 1 2 EN miGrafo;
+AGREGARARISTA 1 3 EN miGrafo;
+AGREGARARISTA 2 4 EN miGrafo;
+AGREGARARISTA 2 5 EN miGrafo;
+AGREGARARISTA 3 5 EN miGrafo;
+AGREGARARISTA 4 6 EN miGrafo;
+AGREGARARISTA 5 6 EN miGrafo;
+
+// Grafo:
+//   1 -- 2 -- 4
+//   |    |    |
+//   3 -- 5 -- 6
+
+// --- Ver VECINOS de un nodo ---
+MOSTRAR VECINOS 1 EN miGrafo;
+MOSTRAR VECINOS 2 EN miGrafo;
+MOSTRAR VECINOS 5 EN miGrafo;
+
+// --- Recorrido BFS (anchura) desde nodo 1 ---
+BFS EN miGrafo;
+
+// --- Recorrido DFS (profundidad) desde nodo 1 ---
+DFS EN miGrafo;
+
+// --- ELIMINAR una ARISTA ---
+ELIMINARARISTA 3 5 EN miGrafo;
+
+// Grafo actualizado:
+//   1 -- 2 -- 4
+//   |    |    |
+//   3    5 -- 6
+
+// --- Recorrido BFS tras eliminar arista ---
+BFS EN miGrafo;
+
+// --- ELIMINAR un NODO ---
+ELIMINARNODO 6 EN miGrafo;
+
+// Grafo: nodo 6 y sus aristas eliminados
+//   1 -- 2 -- 4
+//   |    |
+//   3    5
+
+// --- Vecinos de 4 tras eliminar nodo 6 ---
+MOSTRAR VECINOS 4 EN miGrafo;
+
+// --- Agregar nuevo nodo y conectar ---
+AGREGARNODO 7 700 EN miGrafo;
+AGREGARARISTA 1 7 EN miGrafo;
+AGREGARARISTA 7 4 EN miGrafo;
+
+MOSTRAR VECINOS 7 EN miGrafo;
+
+// --- DFS final ---
+DFS EN miGrafo;
+
+MOSTRAR 999;

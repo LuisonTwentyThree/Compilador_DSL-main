@@ -1,0 +1,83 @@
+// ============================================================
+// EJEMPLO: LISTA ENLAZADA (Singly Linked List)
+// Operaciones: INSERTAR_INICIO, INSERTAR_FINAL, INSERTAR_EN_POSICION,
+//              ELIMINAR_INICIO, ELIMINAR_FINAL, ELIMINAR, ELIMINAR_POSICION,
+//              BUSCAR, TAMANO
+// ============================================================
+
+CREAR LISTA_ENLAZADA miLista;
+
+// --- Verificar VACIA al inicio ---
+IF (VACIA EN miLista) {
+    MOSTRAR 0;
+}
+
+// --- Insertar al FINAL ---
+INSERTAR_FINAL 10 EN miLista;
+INSERTAR_FINAL 20 EN miLista;
+INSERTAR_FINAL 30 EN miLista;
+INSERTAR_FINAL 40 EN miLista;
+
+// Estado: 10 -> 20 -> 30 -> 40
+
+// --- Insertar al INICIO ---
+INSERTAR_INICIO 5 EN miLista;
+
+// Estado: 5 -> 10 -> 20 -> 30 -> 40
+
+// --- Insertar en POSICION especifica (0-indexado) ---
+//INSERTAR_EN_POSICION 2 15 EN miLista;
+
+// Estado: 5 -> 10 -> 15 -> 20 -> 30 -> 40
+
+// --- Consultar TAMANO ---
+CREAR NUMERO tam = 0;
+tam = TAMANO EN miLista;
+MOSTRAR tam;
+
+// --- BUSCAR un valor ---
+BUSCAR 20 EN miLista;
+BUSCAR 99 EN miLista;
+
+// --- ELIMINAR por valor ---
+ELIMINAR 15 EN miLista;
+
+// Estado: 5 -> 10 -> 20 -> 30 -> 40
+
+// --- ELIMINAR por POSICION (posicion 1 = segundo elemento) ---
+ELIMINAR_POSICION 1 EN miLista;
+
+// Estado: 5 -> 20 -> 30 -> 40
+
+// --- ELIMINAR del INICIO ---
+ELIMINAR_INICIO EN miLista;
+
+// Estado: 20 -> 30 -> 40
+
+// --- ELIMINAR del FINAL ---
+ELIMINAR_FINAL EN miLista;
+
+// Estado: 20 -> 30
+
+// --- Tamano final ---
+tam = TAMANO EN miLista;
+MOSTRAR tam;
+
+// --- Insertar mas con FOR ---
+CREAR NUMERO i = 0;
+FOR (i = 50; i < 90; i = i + 10) {
+    INSERTAR_FINAL i EN miLista;
+}
+
+// Estado: 20 -> 30 -> 50 -> 60 -> 70 -> 80
+
+// --- Vaciar con WHILE ---
+WHILE (VACIA EN miLista) {
+    ELIMINAR_INICIO EN miLista;
+}
+
+IF (VACIA EN miLista) {
+    MOSTRAR 0;
+}
+
+MOSTRAR 999;

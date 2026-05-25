@@ -1,0 +1,55 @@
+// ============================================================
+// EJEMPLO: COLA (Queue - FIFO)
+// Operaciones: ENCOLAR, DESENCOLAR, FRENTE, VACIA, LLENA, TAMANO
+// ============================================================
+
+CREAR COLA miCola TAMANO 5;
+
+// --- Verificar VACIA al inicio ---
+IF (VACIA EN miCola) {
+    MOSTRAR 0;
+}
+
+// --- ENCOLAR elementos ---
+ENCOLAR 10 EN miCola;
+ENCOLAR 20 EN miCola;
+ENCOLAR 30 EN miCola;
+ENCOLAR 40 EN miCola;
+ENCOLAR 50 EN miCola;
+
+// --- Verificar LLENA ---
+IF (LLENA EN miCola) {
+    MOSTRAR 1;
+}
+
+// --- Consultar TAMANO ---
+CREAR NUMERO tam = 0;
+tam = TAMANO EN miCola;
+MOSTRAR tam;
+
+// --- DESENCOLAR y ver nuevo frente ---
+DESENCOLAR EN miCola;
+MOSTRAR FRENTE EN miCola;
+
+DESENCOLAR EN miCola;
+MOSTRAR FRENTE EN miCola;
+
+// --- Encolar mas elementos (comportamiento circular del buffer) ---
+ENCOLAR 60 EN miCola;
+ENCOLAR 70 EN miCola;
+MOSTRAR FRENTE EN miCola;
+
+// --- Vaciar la cola con WHILE ---
+CREAR NUMERO contador = 0;
+WHILE (VACIA EN miCola) {
+    DESENCOLAR EN miCola;
+    contador = contador + 1;
+}
+MOSTRAR contador;
+
+// --- Confirmar vacia ---
+IF (VACIA EN miCola) {
+    MOSTRAR 0;
+}
+
+MOSTRAR 999;

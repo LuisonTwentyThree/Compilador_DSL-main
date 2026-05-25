@@ -49,7 +49,6 @@ import javax.swing.text.StyledDocument;
 import compilador.codegen.GeneradorCGI;
 import compilador.codegen.OptimizadorCGI;
 import compilador.codegen.asm.GeneradorEnsambladorGrafico;
-import compilador.codegen.asm.IntegradorSalidaASM;
 import compilador.core.Cuadruplo;
 import compilador.core.NodoAST;
 import compilador.lexical.MotorLexico;
@@ -70,7 +69,6 @@ public class Compilador extends JFrame {
     private JTextArea txtSintactico;
     private JTextArea txtCodigoIntermedio;
     private JTextArea txtCodigoOptimizado;
-    private JTextArea txtASM;
     private JTextArea txtASMGrafico;
     
     // Archivo de salida ASM seleccionado
@@ -326,18 +324,12 @@ public class Compilador extends JFrame {
         JScrollPane scrollOpt = new JScrollPane(txtCodigoOptimizado);
         pestañas.addTab("Código Optimizado", scrollOpt);
         // --- PESTAÑA: ENSAMBLADOR (ASM) ---
-        txtASM = new JTextArea();
-        txtASM.setEditable(false);
-        txtASM.setFont(new Font("Consolas", Font.PLAIN, 12));
-        txtASM.setForeground(new Color(30, 30, 30));
-        JScrollPane scrollASM = new JScrollPane(txtASM);
         txtASMGrafico = new JTextArea();
         txtASMGrafico.setEditable(false);
         txtASMGrafico.setFont(new Font("Consolas", Font.PLAIN, 12));
         txtASMGrafico.setForeground(new Color(45, 45, 45));
         JScrollPane scrollASMGrafico = new JScrollPane(txtASMGrafico);
         pestañas.addTab("Ensamblador Grafico (ASM)", scrollASMGrafico);
-        pestañas.addTab("Ensamblador (ASM)", scrollASM);
         // --- FIN CÓDIGO NUEVO ---
         // 5. ERRORES
         String[] colsErrores = {"Línea", "Fase", "Descripción del Error"};
@@ -442,7 +434,6 @@ public class Compilador extends JFrame {
         txtSintactico.setText("");
         if(txtCodigoIntermedio != null) txtCodigoIntermedio.setText(""); // <--- AGREGA ESTA LÍNEA
         if(txtCodigoOptimizado != null) txtCodigoOptimizado.setText("");
-        if(txtASM != null) txtASM.setText("");
         if(txtASMGrafico != null) txtASMGrafico.setText("");
         raizAST = null;
         lblResumen.setForeground(Color.BLACK);
@@ -577,27 +568,13 @@ public class Compilador extends JFrame {
                     }
                     txtCodigoOptimizado.setText(sbOpt.toString());
                     txtCodigoOptimizado.setCaretPosition(0);
-                    // --- INTEGRAR GENERACIÓN ASM CON EL INTEGRADOR EXISTENTE ---
+                    // --- GENERAR ENSAMBLADOR GRAFICO ---
                     try {
-                        // IntegradorSalidaASM no es solo salida por terminal:
-                        // recibe los cuadruplos optimizados, genera el .asm normal
-                        // y mantiene el codigo en memoria para mostrarlo en txtASM.
-                        IntegradorSalidaASM integrador = new IntegradorSalidaASM(nombreBaseSalidaASM);
-                        for (Cuadruplo c : codigoOptimizado) {
-                            integrador.agregarCuadruplo(c);
-                        }
-                        integrador.generarArchivosCompletos();
-                        // Aqui se pasa el resultado al modo grafico de la aplicacion
-                        // Swing: el texto generado se muestra en la pestana/panel ASM.
-                        txtASM.setText(integrador.obtenerCodigoEnsamblador());
-                        txtASM.setCaretPosition(0);
-                        // Esta salida grafica es independiente: usa los mismos
-                        // cuadruplos, pero los traduce con GeneradorEnsambladorGrafico.
                         generarEnsambladorGrafico(codigoOptimizado);
-                        lblResumen.setText(" Compilación exitosa. Archivos ASM generados: " + nombreBaseSalidaASM + ".asm");
+                        lblResumen.setText(" Compilación exitosa. ASM grafico generado: " + nombreBaseSalidaASM + "_grafico.asm");
                         lblResumen.setForeground(new Color(0, 128, 0));
                     } catch (Exception exAsm) {
-                        txtASM.setText("Error al generar ASM:\n" + exAsm.getMessage());
+                        txtASMGrafico.setText("Error al generar ASM grafico:\n" + exAsm.getMessage());
                     }
                 } catch (Exception exOpt) {
                     txtCodigoOptimizado.setText("Error durante la optimización:\n" + exOpt.getMessage());

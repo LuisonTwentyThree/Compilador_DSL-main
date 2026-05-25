@@ -13,13 +13,18 @@ import compilador.core.Cuadruplo;
 /**
  * Backend grafico 8086 para EMU8086/MASM.
  *
- * No reemplaza a GeneradorEnsamblador: es una salida paralela que usa los
- * mismos cuadruplos, pero inicializa modo 13h y redibuja las estructuras del DSL
- * como rectangulos/nodos usando BIOS int 10h.
+ * Toma los cuadruplos optimizados, inicializa modo 13h y redibuja las
+ * estructuras del DSL como rectangulos/nodos usando BIOS int 10h.
  */
-public class GeneradorEnsambladorGrafico {
-    // Backend ASM grafico: usa los mismos cuadruplos que el backend normal,
-    // pero genera un programa que entra a modo 13h y dibuja estructuras.
+public class GeneradorEnsambladorGrafico {// Este backend se enfoca en la visualizacion grafica de las estructuras del DSL, 
+                                          // por lo que cada operacion relevante actualiza memoria y luego llama a una rutina GRAFICAR_TODO
+                                          //  que redibuja toda la pantalla para reflejar el nuevo estado de las estructuras. 
+                                          // Las operaciones de consulta pueden actualizar variables temporales para mostrar resultados, 
+                                          // pero no necesitan redibujar toda la pantalla a menos que el resultado afecte visualmente a las estructuras 
+                                          // (como mostrar el resultado de una búsqueda resaltando un nodo).
+
+    // Backend ASM grafico: genera un programa que entra a modo 13h y dibuja
+    // estructuras.
     private final List<String> codigo;
     private final Set<String> variables;
     private final Set<String> temporalesRecorrido;
@@ -33,7 +38,7 @@ public class GeneradorEnsambladorGrafico {
     private boolean recorridoGraficoEmitido;
     private int contadorEtiquetas;
 
-    public GeneradorEnsambladorGrafico() {
+    public GeneradorEnsambladorGrafico() {// El constructor inicializa las estructuras de datos necesarias para generar el codigo ASM grafico, y luego llama a agregarEncabezado para preparar el programa.
         this.codigo = new ArrayList<>();
         this.variables = new LinkedHashSet<>();
         this.temporalesRecorrido = new LinkedHashSet<>();
@@ -49,7 +54,7 @@ public class GeneradorEnsambladorGrafico {
         agregarEncabezado();
     }
 
-    private void agregarEncabezado() {
+    private void agregarEncabezado() {// El encabezado de este backend es diferente al ASM normal porque se enfoca en la visualizacion grafica.
         // A diferencia del ASM normal, aqui se inicializa modo grafico 13h
         // desde el inicio para poder pintar pixeles con BIOS int 10h.
         emitir("; ============================================");
@@ -58,7 +63,7 @@ public class GeneradorEnsambladorGrafico {
         emitir("; ============================================");
         emitir("");
         emitir(".model small");
-        emitir(".stack 100h");
+        emitir(".stack 1000h");
         emitir("");
         emitir(".data");
         emitir("    titulo db 'DSL - VISUALIZACION GRAFICA', 0");
@@ -74,7 +79,7 @@ public class GeneradorEnsambladorGrafico {
         emitir("");
     }
 
-    public void traducirCuadruplo(Cuadruplo c) {
+    public void traducirCuadruplo(Cuadruplo c) {// Este metodo es el corazon del backend grafico: cada cuadruplo relevante se traduce a instrucciones ASM que actualizan memoria y luego llaman a GRAFICAR_TODO.
         // Este switch no intenta cubrir todo el lenguaje con detalle textual;
         // se enfoca en operaciones que cambian estructuras y por eso requieren redibujo.
         if (c == null || c.operador == null) {
@@ -90,10 +95,36 @@ public class GeneradorEnsambladorGrafico {
             case "ALLOC":
                 traducirAlloc(arg1, arg2, res);
                 break;
+            case "ETIQUETA":
+                traducirEtiqueta(res);
+                break;
+            case "GOTO":
+                traducirGoto(res);
+                break;
+            case "IF_FALSE":
+                traducirSaltoCondicional(arg1, res, false);
+                break;
+            case "IF_TRUE":
+                traducirSaltoCondicional(arg1, res, true);
+                break;
             case "=":
                 registrarVariable(res);
                 cargarAX(arg1);
                 emitir("    mov [" + res + "], ax");
+                break;
+            case "+":
+            case "-":
+            case "*":
+            case "/":
+                traducirAritmetica(op, arg1, arg2, res);
+                break;
+            case "<":
+            case ">":
+            case "==":
+            case "!=":
+            case "<=":
+            case ">=":
+                traducirComparacion(op, arg1, arg2, res);
                 break;
             case "APILAR":
             case "PUSH":
@@ -131,6 +162,12 @@ public class GeneradorEnsambladorGrafico {
             case "TAMANO":
                 traducirTamanoEstructura(arg1, res);
                 break;
+            case "VACIA":
+                traducirEstadoEstructura(arg1, res, true);
+                break;
+            case "LLENA":
+                traducirEstadoEstructura(arg1, res, false);
+                break;
             case "BUSCAR":
                 traducirBuscarEstructura(arg1, res);
                 break;
@@ -139,6 +176,10 @@ public class GeneradorEnsambladorGrafico {
             case "POSTORDEN":
             case "RECORRIDOPORNIVELES":
                 traducirRecorridoArbol(op, arg1, res);
+                break;
+            case "ELIMINAR":
+            case "ELIMINAR_POSICION":
+                traducirEliminacionConParam(op, arg1, res);
                 break;
             case "VECINOS":
                 traducirVecinosGrafo(arg1, arg2, res);
@@ -149,8 +190,13 @@ public class GeneradorEnsambladorGrafico {
         }
     }
 
-    public void procesarCuadruplos(List<Cuadruplo> cuadruplos) {
-        // Recibe la misma lista optimizada que el generador ASM normal.
+// Cada operacion que modifica una estructura importante (como apilar o insertar en un grafo) debe actualizar la memoria correspondiente 
+// y luego llamar a GRAFICAR_TODO para que el programa refleje visualmente el nuevo estado de la estructura. Las operaciones de consulta (como comparar o buscar)
+// pueden actualizar variables temporales para mostrar resultados, pero no necesitan redibujar toda la pantalla a menos que el resultado afecte visualmente a las 
+// estructuras (como mostrar el resultado de una búsqueda resaltando un nodo).
+
+    public void procesarCuadruplos(List<Cuadruplo> cuadruplos) {// Este metodo se llama desde el compilador despues de generar la lista optimizada de cuadruplos.
+        // Recibe la lista optimizada generada por el compilador.
         // Cada operacion relevante actualiza memoria y llama a GRAFICAR_TODO.
         if (cuadruplos != null) {
             for (Cuadruplo c : cuadruplos) {
@@ -160,7 +206,113 @@ public class GeneradorEnsambladorGrafico {
         finalizarPrograma();
     }
 
-    private void traducirAlloc(String tamano, String tipo, String nombre) {
+    private void traducirEtiqueta(String etiqueta) {// Las etiquetas se traducen como puntos de salto en el codigo ASM, pero no necesitan redibujar nada.
+        if (!etiqueta.isEmpty()) {
+            emitir(etiqueta + ":");
+        }
+    }
+
+    private void traducirGoto(String etiqueta) {// Los saltos incondicionales se traducen como instrucciones JMP, pero no necesitan redibujar nada.
+        if (!etiqueta.isEmpty()) {
+            emitir("    jmp " + etiqueta);
+        }
+    }
+
+    private void traducirSaltoCondicional(String condicion, String etiqueta, boolean saltarSiVerdadero) {// Los saltos condicionales se traducen como comparaciones seguidas de saltos (JE/JNE) dependiendo 
+                                                                                                        // de si se salta cuando la condicion es verdadera o falsa. No necesitan redibujar nada.
+        if (condicion.isEmpty() || etiqueta.isEmpty()) {
+            return;
+        }
+        cargarAX(condicion);
+        emitir("    cmp ax, 0");
+        emitir("    " + (saltarSiVerdadero ? "jne " : "je ") + etiqueta);
+    }
+
+    private void traducirAritmetica(String op, String arg1, String arg2, String resultado) {// Las operaciones aritmeticas se traducen a instrucciones que cargan operandos en registros, realizan la operacion, y luego almacenan el resultado en memoria.
+        if (resultado.isEmpty()) {
+            return;
+        }
+        registrarVariable(resultado);
+        emitir("    ; " + resultado + " = " + arg1 + " " + op + " " + arg2);
+        cargarAX(arg1);
+
+        if ("+".equals(op)) {
+            emitirOperacionConAX("add", arg2);
+        } else if ("-".equals(op)) {
+            emitirOperacionConAX("sub", arg2);
+        } else if ("*".equals(op)) {
+            cargarBX(arg2);
+            emitir("    imul bx");
+        } else if ("/".equals(op)) {
+            cargarBX(arg2);
+            String fin = nuevaEtiqueta();
+            emitir("    cmp bx, 0");
+            emitir("    je " + fin);
+            emitir("    cwd");
+            emitir("    idiv bx");
+            emitir(fin + ":");
+        }
+
+        emitir("    mov [" + resultado + "], ax");
+    }
+
+    private void traducirComparacion(String op, String arg1, String arg2, String resultado) {// Las comparaciones se traducen a instrucciones que cargan operandos, 
+                                                                                            // realizan la comparacion, y luego almacenan 1 o 0 en el resultado dependiendo del resultado de la comparacion. 
+                                                                                            // No necesitan redibujar nada a menos que el resultado se use para mostrar algo visualmente.
+        if (resultado.isEmpty()) {
+            return;
+        }
+        registrarVariable(resultado);
+        String verdadero = nuevaEtiqueta();
+        String fin = nuevaEtiqueta();
+
+        emitir("    ; " + resultado + " = " + arg1 + " " + op + " " + arg2);
+        cargarAX(arg1);
+        compararAXCon(arg2);
+        emitir("    mov word ptr [" + resultado + "], 0");
+        emitir("    " + saltoComparacion(op) + " " + verdadero);
+        emitir("    jmp " + fin);
+        emitir(verdadero + ":");
+        emitir("    mov word ptr [" + resultado + "], 1");
+        emitir(fin + ":");
+    }
+
+    private void traducirEstadoEstructura(String estructura, String resultado, boolean consultarVacia) {// Las consultas de estado (vacía/llena) se traducen a instrucciones que verifican el contador o 
+                                                                                                        //estado interno de la estructura, y luego almacenan 1 o 0 en el resultado dependiendo del estado.
+        if (estructura.isEmpty() || resultado.isEmpty()) {
+            return;
+        }
+        registrarVariable(resultado);
+
+        String tipo = estructurasTipo.get(estructura);
+        String contador = contadorEstructura(estructura, tipo);
+        String verdadero = nuevaEtiqueta();
+        String fin = nuevaEtiqueta();
+        int capacidad = estructurasTamano.getOrDefault(estructura, 100);
+
+        emitir("    ; " + (consultarVacia ? "VACIA" : "LLENA") + " EN " + estructura + " -> " + resultado);
+        emitir("    mov word ptr [" + resultado + "], 0");
+
+        if (contador == null) {
+            emitir("    ; Estado pendiente para " + estructura);
+            return;
+        }
+
+        if (consultarVacia) {
+            emitir("    cmp word ptr [" + contador + "], 0");
+        } else {
+            emitir("    cmp word ptr [" + contador + "], " + capacidad);
+        }
+        emitir("    je " + verdadero);
+        emitir("    jmp " + fin);
+        emitir(verdadero + ":");
+        emitir("    mov word ptr [" + resultado + "], 1");
+        emitir(fin + ":");
+    }
+
+    private void traducirAlloc(String tamano, String tipo, String nombre) {// La creación de estructuras se traduce a instrucciones que registran el tipo y tamaño de la estructura en mapas para 
+                                                                          // referencia futura, y luego llaman a GRAFICAR_TODO para dibujar la nueva estructura.
+
         // Registra el tipo y capacidad de cada estructura para luego declarar
         // sus arreglos en .data y saber que rutina de dibujo necesita.
         if (nombre.isEmpty()) {
@@ -181,7 +333,9 @@ public class GeneradorEnsambladorGrafico {
         emitir("    call GRAFICAR_TODO");
     }
 
-    private void traducirInsercion(String op, String arg1, String arg2, String estructura) {
+    private void traducirInsercion(String op, String arg1, String arg2, String estructura) {// Las inserciones en estructuras se traducen a instrucciones que actualizan la memoria correspondiente 
+                                                                                            // (como el arreglo de la pila o los nodos del grafo) y luego llaman a GRAFICAR_TODO para reflejar visualmente 
+                                                                                            // el cambio.
         // Las inserciones modifican el estado interno de la estructura y luego
         // fuerzan un redibujo completo para reflejar el nuevo estado visual.
         String tipo = estructurasTipo.get(estructura);
@@ -192,7 +346,8 @@ public class GeneradorEnsambladorGrafico {
             return;
         }
 
-        if ("PILA".equals(tipo) && ("APILAR".equals(op) || "PUSH".equals(op))) {
+        if ("PILA".equals(tipo) && ("APILAR".equals(op) || "PUSH".equals(op))) {// Para apilar, se verifica el tope actual contra la capacidad, se inserta el nuevo valor en el arreglo de la pila, 
+                                                                                //se incrementa el tope, y luego se llama a GRAFICAR_TODO.
             int cap = estructurasTamano.getOrDefault(estructura, 100);
             String fin = nuevaEtiqueta();
             emitir("    ; APILAR " + arg1 + " EN " + estructura);
@@ -208,7 +363,9 @@ public class GeneradorEnsambladorGrafico {
             return;
         }
 
-        if ("COLA".equals(tipo) && ("ENCOLAR".equals(op) || "ENQUEUE".equals(op))) {
+        if ("COLA".equals(tipo) && ("ENCOLAR".equals(op) || "ENQUEUE".equals(op))) {// Para encolar, se verifica el contador actual contra la capacidad, se inserta el nuevo valor en el arreglo de la 
+                                                                                    // cola usando el índice rear, se incrementa rear (con wrap-around), se incrementa el contador, 
+                                                                                    // y luego se llama a GRAFICAR_TODO.
             int cap = estructurasTamano.getOrDefault(estructura, 100);
             String noWrap = nuevaEtiqueta();
             String fin = nuevaEtiqueta();
@@ -230,43 +387,51 @@ public class GeneradorEnsambladorGrafico {
             return;
         }
 
-        if ("LISTA".equals(tipo) && op.startsWith("INSERTAR")) {
+        if ("LISTA".equals(tipo) && op.startsWith("INSERTAR")) {// Para insertar en una lista, se crea un nuevo nodo en el heap con el valor, se actualizan los punteros head/tail y 
+                                                                        // el contador según si es inserción al inicio o al final, y luego se llama a GRAFICAR_TODO.
             insertarLista(op, arg2.isEmpty() ? arg1 : arg2, estructura);
             emitir("    call GRAFICAR_TODO");
             return;
         }
 
-        if ("ARBOL".equals(tipo) && "AGREGARNODO".equals(op)) {
+        if ("ARBOL".equals(tipo) && "AGREGARNODO".equals(op)) {// Para agregar un nodo a un árbol, se crea un nuevo nodo en el heap con el valor, se inserta en la posición 
+                                                                // correcta según las reglas del árbol binario de búsqueda, y luego se llama a GRAFICAR_TODO. Para agregar una arista, 
+                                                                // se actualizan los nodos correspondientes en el heap para reflejar la nueva conexión, y luego se llama a GRAFICAR_TODO.
             insertarArbol(arg2.isEmpty() ? arg1 : arg2, estructura);
             emitir("    call GRAFICAR_TODO");
             return;
         }
 
-        if ("GRAFO".equals(tipo) && "AGREGARNODO".equals(op)) {
+        if ("GRAFO".equals(tipo) && "AGREGARNODO".equals(op)) {// Para agregar un nodo a un grafo, se crea un nuevo nodo en el heap con el valor, se actualiza la estructura de datos del 
+                                                                // grafo para incluir el nuevo nodo, y luego se llama a GRAFICAR_TODO.
             insertarNodoGrafo(arg1, estructura);
             emitir("    call GRAFICAR_TODO");
             return;
         }
 
-        if ("GRAFO".equals(tipo) && "AGREGARARISTA".equals(op)) {
+        if ("GRAFO".equals(tipo) && "AGREGARARISTA".equals(op)) {// Para agregar una arista a un grafo, se actualizan los nodos correspondientes en el heap para reflejar la nueva 
+                                                                // conexión entre los nodos, y luego se llama a GRAFICAR_TODO.
             insertarAristaGrafo(arg1, arg2, estructura);
             emitir("    call GRAFICAR_TODO");
             return;
         }
 
-        if ("HASH".equals(tipo) && "INSERTAR".equals(op)) {
+        if ("HASH".equals(tipo) && "INSERTAR".equals(op)) {// Para insertar en una tabla hash, se calcula el índice usando la función hash, se maneja colisiones si es necesario, 
+                                                            // se inserta el valor en la posición correspondiente del arreglo de la tabla hash,
             insertarHash(arg1, arg2, estructura);
             emitir("    call GRAFICAR_TODO");
             return;
         }
 
-        if ("HASH".equals(tipo) && "ACTUALIZAR".equals(op)) {
+        if ("HASH".equals(tipo) && "ACTUALIZAR".equals(op)) {// Para actualizar un valor en una tabla hash, se calcula el índice usando la función hash, se busca el valor a actualizar, 
+                                                            // se modifica si se encuentra, y luego se llama a GRAFICAR_TODO para reflejar el cambio.
             actualizarHash(arg1, arg2, estructura);
             emitir("    call GRAFICAR_TODO");
         }
     }
 
-    private void traducirBuscarEstructura(String clave, String estructura) {
+    private void traducirBuscarEstructura(String clave, String estructura) {// Para buscar en una estructura, se actualiza una variable temporal con el resultado de la búsqueda 
+                                                                            // (como el índice encontrado o un indicador de éxito/fallo),
         String tipo = estructurasTipo.get(estructura);
         if ("HASH".equals(tipo)) {
             buscarHash(clave, estructura);
@@ -277,11 +442,13 @@ public class GeneradorEnsambladorGrafico {
         emitir("    call GRAFICAR_TODO");
     }
 
-    private void traducirEliminacion(String op, String estructura) {
+    private void traducirEliminacion(String op, String estructura) {// Para eliminar de una estructura, se actualiza la memoria correspondiente para reflejar la eliminación 
+                                                                    // (como el arreglo de la pila o los nodos del grafo),
         // Igual que las inserciones, las eliminaciones actualizan memoria y
         // despues llaman a GRAFICAR_TODO para refrescar la pantalla.
         String tipo = estructurasTipo.get(estructura);
-        if ("PILA".equals(tipo) && ("DESAPILAR".equals(op) || "POP".equals(op))) {
+        if ("PILA".equals(tipo) && ("DESAPILAR".equals(op) || "POP".equals(op))) {// Para desapilar, se verifica si la pila está vacía, se obtiene el valor del tope actual, 
+                                                                                // se decrementa el tope, se limpia la posición del arreglo de la pila,
             String vacia = nuevaEtiqueta();
             String fin = nuevaEtiqueta();
             emitir("    ; DESAPILAR EN " + estructura);
@@ -310,7 +477,8 @@ public class GeneradorEnsambladorGrafico {
             recorridoGraficoEmitido = true;
             return;
         }
-
+// Para desencolar, se verifica si la cola está vacía, se obtiene el valor del frente actual, se incrementa el índice de frente (con wrap-around), 
+// se decrementa el contador, se limpia la posición del arreglo de la cola, y luego se llama a GRAFICAR_TODO para reflejar visualmente el cambio.
         if ("COLA".equals(tipo) && ("DESENCOLAR".equals(op) || "DEQUEUE".equals(op)
                 || "ELIMINAR_FRENTE".equals(op))) {
             int cap = estructurasTamano.getOrDefault(estructura, 100);
@@ -333,24 +501,293 @@ public class GeneradorEnsambladorGrafico {
             return;
         }
 
-        if ("LISTA".equals(tipo)) {
-            String fin = nuevaEtiqueta();
-            emitir("    ; " + op + " EN " + estructura);
-            emitir("    cmp word ptr [" + estructura + "_head], 0");
-            emitir("    je " + fin);
-            emitir("    mov bx, [" + estructura + "_head]");
-            emitir("    mov ax, HEAP[bx+2]");
-            emitir("    mov [" + estructura + "_head], ax");
-            emitir("    dec word ptr [" + estructura + "_count]");
-            emitir("    cmp ax, 0");
-            emitir("    jne " + fin);
-            emitir("    mov word ptr [" + estructura + "_tail], 0");
-            emitir(fin + ":");
+        if ("LISTA".equals(tipo)) {// Para eliminar de una lista, se verifica si la lista está vacía, se obtiene el valor del nodo a eliminar (dependiendo si es al inicio o al final),
+                                // se actualizan los punteros head/tail y el contador, se limpia el nodo eliminado en el heap, y luego se llama a GRAFICAR_TODO para reflejar visualmente el cambio.
+            if ("ELIMINAR_FINAL".equals(op)) {
+                eliminarFinalLista(estructura);
+            } else {
+                String fin = nuevaEtiqueta();
+                emitir("    ; " + op + " EN " + estructura);
+                emitir("    cmp word ptr [" + estructura + "_head], 0");
+                emitir("    je " + fin);
+                emitir("    mov bx, [" + estructura + "_head]");
+                emitir("    mov ax, HEAP[bx+2]");
+                emitir("    mov [" + estructura + "_head], ax");
+                emitir("    dec word ptr [" + estructura + "_count]");
+                emitir("    cmp ax, 0");
+                emitir("    jne " + fin);
+                emitir("    mov word ptr [" + estructura + "_tail], 0");
+                emitir(fin + ":");
+                emitir("    call GRAFICAR_TODO");
+            }
+        }
+    }
+
+    private void traducirEliminacionConParam(String op, String valor, String estructura) {// Para eliminaciones que requieren un parámetro (como eliminar un valor específico 
+                                                                                        // de una lista o un nodo específico de un árbol), se actualiza la memoria correspondiente para reflejar 
+                                                                                        // la eliminación, y luego se llama a GRAFICAR_TODO para reflejar visualmente el cambio. 
+                                                                                        // El proceso específico depende del tipo de estructura y la operación.
+        String tipo = estructurasTipo.get(estructura);
+        if (tipo == null) {
+            emitir("    ; Operacion grafica pendiente: " + op + " " + valor + " -> " + estructura);
+            return;
+        }
+        if ("LISTA".equals(tipo) && "ELIMINAR".equals(op)) {
+            eliminarListaPorValor(valor, estructura);
+        } else if ("LISTA".equals(tipo) && "ELIMINAR_POSICION".equals(op)) {
+            eliminarListaPorPosicion(valor, estructura);
+        } else if ("ARBOL".equals(tipo) && "ELIMINAR".equals(op)) {
+            eliminarArbol(valor, estructura);
+        } else {
+            emitir("    ; Operacion grafica pendiente: " + op + " " + valor + " -> " + estructura);
             emitir("    call GRAFICAR_TODO");
         }
     }
 
-    private void insertarLista(String op, String valor, String lista) {
+    private void eliminarFinalLista(String lista) {// Para eliminar el último nodo de una lista, se verifica si la lista está vacía, se obtiene el valor del nodo a eliminar, 
+                                                    // se actualizan los punteros head/tail y el contador, se limpia el nodo eliminado en el heap, y luego se llama a GRAFICAR_TODO 
+                                                    // para reflejar visualmente el cambio. Si la lista tiene solo un nodo, se limpia head y tail. Si tiene más de un nodo, se recorre 
+                                                    // hasta el penúltimo para actualizar tail.
+        String soloUno = nuevaEtiqueta();
+        String loop = nuevaEtiqueta();
+        String encontrado = nuevaEtiqueta();
+        String fin = nuevaEtiqueta();
+        heapNecesario = true;
+        emitir("    ; ELIMINAR_FINAL EN " + lista);
+        emitir("    cmp word ptr [" + lista + "_head], 0");
+        emitir("    je " + fin);
+        emitir("    mov bx, [" + lista + "_head]");
+        emitir("    cmp bx, [" + lista + "_tail]");
+        emitir("    je " + soloUno);
+        // More than one node: find penultimate
+        emitir("    mov si, bx");
+        emitir("    mov bx, HEAP[bx+2]");
+        emitir(loop + ":");
+        emitir("    cmp word ptr HEAP[bx+2], 0");
+        emitir("    je " + encontrado);
+        emitir("    mov si, bx");
+        emitir("    mov bx, HEAP[bx+2]");
+        emitir("    jmp " + loop);
+        emitir(encontrado + ":");
+        emitir("    mov word ptr HEAP[si+2], 0");
+        emitir("    mov [" + lista + "_tail], si");
+        emitir("    dec word ptr [" + lista + "_count]");
+        emitir("    jmp " + fin);
+        emitir(soloUno + ":");
+        emitir("    mov word ptr [" + lista + "_head], 0");
+        emitir("    mov word ptr [" + lista + "_tail], 0");
+        emitir("    mov word ptr [" + lista + "_count], 0");
+        emitir(fin + ":");
+        emitir("    call GRAFICAR_TODO");
+    }
+
+    private void eliminarListaPorValor(String valor, String lista) {// Para eliminar un nodo específico de una lista por valor, se verifica si la lista está vacía, se recorre la lista para encontrar 
+                                                                    // el nodo con el valor dado, se actualizan los punteros head/tail y el contador, se limpia el nodo eliminado en el heap, y luego \
+                                                                    // se llama a GRAFICAR_TODO para reflejar visualmente el cambio. Si el nodo a eliminar es el head, se actualiza head. 
+                                                                    // Si es otro nodo, se actualiza el puntero del nodo anterior. Si el nodo eliminado es el tail, se actualiza tail.
+        String esHead = nuevaEtiqueta();
+        String loop = nuevaEtiqueta();
+        String encontrado = nuevaEtiqueta();
+        String decCount = nuevaEtiqueta();
+        String fin = nuevaEtiqueta();
+        heapNecesario = true;
+        emitir("    ; ELIMINAR " + valor + " EN " + lista);
+        cargarAX(valor);
+        emitir("    mov [gfx_busqueda], ax");
+        emitir("    cmp word ptr [" + lista + "_head], 0");
+        emitir("    je " + fin);
+        emitir("    mov bx, [" + lista + "_head]");
+        emitir("    mov ax, HEAP[bx]");
+        emitir("    cmp ax, [gfx_busqueda]");
+        emitir("    je " + esHead);
+        emitir("    mov si, bx");
+        emitir("    mov bx, HEAP[bx+2]");
+        emitir(loop + ":");
+        emitir("    cmp bx, 0");
+        emitir("    je " + fin);
+        emitir("    mov ax, HEAP[bx]");
+        emitir("    cmp ax, [gfx_busqueda]");
+        emitir("    je " + encontrado);
+        emitir("    mov si, bx");
+        emitir("    mov bx, HEAP[bx+2]");
+        emitir("    jmp " + loop);
+        emitir(encontrado + ":");
+        emitir("    mov ax, HEAP[bx+2]");
+        emitir("    mov HEAP[si+2], ax");
+        emitir("    cmp ax, 0");
+        emitir("    jne " + decCount);
+        emitir("    mov [" + lista + "_tail], si");
+        emitir("    jmp " + decCount);
+        emitir(esHead + ":");
+        emitir("    mov ax, HEAP[bx+2]");
+        emitir("    mov [" + lista + "_head], ax");
+        emitir("    cmp ax, 0");
+        emitir("    jne " + decCount);
+        emitir("    mov word ptr [" + lista + "_tail], 0");
+        emitir(decCount + ":");
+        emitir("    dec word ptr [" + lista + "_count]");
+        emitir(fin + ":");
+        emitir("    call GRAFICAR_TODO");
+    }
+
+    private void eliminarListaPorPosicion(String pos, String lista) {// Para eliminar un nodo específico de una lista por posición, se verifica si la lista está vacía, se recorre la lista 
+                                                                    // para encontrar el nodo en la posición dada, se actualizan los punteros head/tail y el contador, se limpia el nodo eliminado 
+                                                                    // en el heap, y luego se llama a GRAFICAR_TODO para reflejar visualmente el cambio. 
+                                                                    // Si el nodo a eliminar es el head (posición 0), se actualiza head. Si es otro nodo, se actualiza el puntero del nodo anterior.
+                                                                    // Si el nodo eliminado es el tail, se actualiza tail.
+        String buscarPos = nuevaEtiqueta();
+        String avanzar = nuevaEtiqueta();
+        String actualizarTail = nuevaEtiqueta();
+        String decCount = nuevaEtiqueta();
+        String fin = nuevaEtiqueta();
+        heapNecesario = true;
+        emitir("    ; ELIMINAR_POSICION " + pos + " EN " + lista);
+        cargarAX(pos);
+        emitir("    mov [gfx_i], ax");
+        emitir("    cmp word ptr [" + lista + "_head], 0");
+        emitir("    je " + fin);
+        emitir("    cmp word ptr [gfx_i], 0");
+        emitir("    jne " + buscarPos);
+        // Position 0: remove head
+        emitir("    mov bx, [" + lista + "_head]");
+        emitir("    mov ax, HEAP[bx+2]");
+        emitir("    mov [" + lista + "_head], ax");
+        emitir("    cmp ax, 0");
+        emitir("    jne " + decCount);
+        emitir("    mov word ptr [" + lista + "_tail], 0");
+        emitir("    jmp " + decCount);
+        // Position > 0: traverse to position-1
+        emitir(buscarPos + ":");
+        emitir("    mov si, [" + lista + "_head]");
+        emitir("    mov cx, 0");
+        emitir(avanzar + ":");
+        emitir("    inc cx");
+        emitir("    cmp cx, [gfx_i]");
+        emitir("    jge " + actualizarTail);
+        emitir("    mov ax, HEAP[si+2]");
+        emitir("    cmp ax, 0");
+        emitir("    je " + fin);
+        emitir("    mov si, ax");
+        emitir("    jmp " + avanzar);
+        emitir(actualizarTail + ":");
+        emitir("    mov bx, HEAP[si+2]");
+        emitir("    cmp bx, 0");
+        emitir("    je " + fin);
+        emitir("    mov ax, HEAP[bx+2]");
+        emitir("    mov HEAP[si+2], ax");
+        emitir("    cmp ax, 0");
+        emitir("    jne " + decCount);
+        emitir("    mov [" + lista + "_tail], si");
+        emitir(decCount + ":");
+        emitir("    dec word ptr [" + lista + "_count]");
+        emitir(fin + ":");
+        emitir("    call GRAFICAR_TODO");
+    }
+
+    private void eliminarArbol(String valor, String arbol) {// Para eliminar un nodo específico de un árbol, se recorre el árbol para encontrar el nodo con el valor dado, 
+                                                            // se actualizan los punteros del nodo padre y los hijos del nodo a eliminar según el caso (sin hijos, un hijo, o dos hijos),
+                                                            // se limpia el nodo eliminado en el heap, y luego se llama a GRAFICAR_TODO para reflejar visualmente el cambio.
+        String find = nuevaEtiqueta();
+        String goRight = nuevaEtiqueta();
+        String found = nuevaEtiqueta();
+        String hasLeft = nuevaEtiqueta();
+        String twoChildren = nuevaEtiqueta();
+        String findSucc = nuevaEtiqueta();
+        String succFound = nuevaEtiqueta();
+        String succRight = nuevaEtiqueta();
+        String doReplace = nuevaEtiqueta();
+        String replParent = nuevaEtiqueta();
+        String replRight = nuevaEtiqueta();
+        String fin = nuevaEtiqueta();
+        heapNecesario = true;
+        emitir("    ; ELIMINAR " + valor + " EN " + arbol);
+        cargarAX(valor);
+        emitir("    mov [gfx_busqueda], ax");
+        emitir("    mov bx, [" + arbol + "_root]");
+        emitir("    cmp bx, 0");
+        emitir("    je " + fin);
+        emitir("    mov word ptr [gfx_i], 0");
+        emitir("    mov word ptr [gfx_valor], 0");
+        // Find node: bx=current, gfx_i=parent, gfx_valor=direction(0=root,1=left,2=right)
+        emitir(find + ":");
+        emitir("    cmp bx, 0");
+        emitir("    je " + fin);
+        emitir("    mov ax, HEAP[bx]");
+        emitir("    cmp ax, [gfx_busqueda]");
+        emitir("    je " + found);
+        emitir("    jl " + goRight);
+        emitir("    mov [gfx_i], bx");
+        emitir("    mov word ptr [gfx_valor], 1");
+        emitir("    mov bx, HEAP[bx+2]");
+        emitir("    jmp " + find);
+        emitir(goRight + ":");
+        emitir("    mov [gfx_i], bx");
+        emitir("    mov word ptr [gfx_valor], 2");
+        emitir("    mov bx, HEAP[bx+4]");
+        emitir("    jmp " + find);
+        // Node found
+        emitir(found + ":");
+        emitir("    mov ax, HEAP[bx+2]");
+        emitir("    mov cx, HEAP[bx+4]");
+        // No left child: replacement = right child (cx)
+        emitir("    cmp ax, 0");
+        emitir("    jne " + hasLeft);
+        emitir("    mov dx, cx");
+        emitir("    jmp " + doReplace);
+        // Has left child
+        emitir(hasLeft + ":");
+        emitir("    cmp cx, 0");
+        emitir("    jne " + twoChildren);
+        emitir("    mov dx, ax");
+        emitir("    jmp " + doReplace);
+        // Two children: find inorder successor (min of right subtree)
+        emitir(twoChildren + ":");
+        emitir("    mov [gfx_ultimo_desapilado], bx");
+        emitir("    mov si, bx");
+        emitir("    mov bx, cx");
+        emitir("    mov cl, 2");
+        emitir(findSucc + ":");
+        emitir("    cmp word ptr HEAP[bx+2], 0");
+        emitir("    je " + succFound);
+        emitir("    mov si, bx");
+        emitir("    mov bx, HEAP[bx+2]");
+        emitir("    mov cl, 1");
+        emitir("    jmp " + findSucc);
+        // Successor found: bx=successor, si=its parent, cl=direction from si to bx
+        emitir(succFound + ":");
+        emitir("    mov ax, HEAP[bx]");
+        emitir("    mov di, [gfx_ultimo_desapilado]");
+        emitir("    mov HEAP[di], ax");
+        emitir("    mov dx, HEAP[bx+4]");
+        emitir("    cmp cl, 1");
+        emitir("    jne " + succRight);
+        emitir("    mov HEAP[si+2], dx");
+        emitir("    jmp " + fin);
+        emitir(succRight + ":");
+        emitir("    mov HEAP[si+4], dx");
+        emitir("    jmp " + fin);
+        // Standard replacement (0 or 1 child)
+        emitir(doReplace + ":");
+        emitir("    cmp word ptr [gfx_i], 0");
+        emitir("    jne " + replParent);
+        emitir("    mov [" + arbol + "_root], dx");
+        emitir("    jmp " + fin);
+        emitir(replParent + ":");
+        emitir("    mov si, [gfx_i]");
+        emitir("    cmp word ptr [gfx_valor], 1");
+        emitir("    jne " + replRight);
+        emitir("    mov HEAP[si+2], dx");
+        emitir("    jmp " + fin);
+        emitir(replRight + ":");
+        emitir("    mov HEAP[si+4], dx");
+        emitir(fin + ":");
+        emitir("    call GRAFICAR_TODO");
+    }
+
+    private void insertarLista(String op, String valor, String lista) {// Para insertar en una lista, se crea un nuevo nodo en el heap con el valor, se actualizan los punteros head/tail y el contador según 
+                                                                        // si es inserción al inicio o al final, y luego se llama a GRAFICAR_TODO para reflejar visualmente el cambio. Si la lista está vacía, 
+                                                                        // head y tail apuntan al nuevo nodo. Si no está vacía, se actualizan los punteros del nuevo nodo y del nodo anterior según 
+                                                                        // si es inserción al inicio o al final.
         String append = nuevaEtiqueta();
         String noVacia = nuevaEtiqueta();
         String fin = nuevaEtiqueta();
@@ -386,7 +823,10 @@ public class GeneradorEnsambladorGrafico {
         emitir("    inc word ptr [" + lista + "_count]");
     }
 
-    private void insertarArbol(String valor, String arbol) {
+    private void insertarArbol(String valor, String arbol) {// Para agregar un nodo a un árbol, se crea un nuevo nodo en el heap con el valor, se inserta en la posición correcta según las reglas del 
+                                                        // árbol binario de búsqueda, y luego se llama a GRAFICAR_TODO para reflejar visualmente el cambio. Si el árbol está vacío, el nuevo nodo se convierte 
+                                                        // en la raíz. Si no está vacío, se recorre el árbol comparando el valor a insertar con los nodos existentes para encontrar la posición correcta 
+                                                        // (izquierda para valores menores, derecha para valores mayores), y se actualizan los punteros del nodo padre para incluir el nuevo nodo.
         String rootExiste = nuevaEtiqueta();
         String loop = nuevaEtiqueta();
         String derecha = nuevaEtiqueta();
@@ -427,7 +867,8 @@ public class GeneradorEnsambladorGrafico {
         emitir(fin + ":");
     }
 
-    private void insertarNodoGrafo(String nodo, String grafo) {
+    private void insertarNodoGrafo(String nodo, String grafo) {// Para agregar un nodo a un grafo, se crea un nuevo nodo en el heap con el valor, se actualiza la estructura de datos del grafo para 
+                                                                // incluir el nuevo nodo, y luego se llama a GRAFICAR_TODO para reflejar visualmente el cambio.
         int cap = estructurasTamano.getOrDefault(grafo, 100);
         String fin = nuevaEtiqueta();
         emitir("    ; AGREGARNODO " + nodo + " EN " + grafo);
@@ -441,7 +882,8 @@ public class GeneradorEnsambladorGrafico {
         emitir(fin + ":");
     }
 
-    private void insertarAristaGrafo(String origen, String destino, String grafo) {
+    private void insertarAristaGrafo(String origen, String destino, String grafo) {// Para agregar una arista a un grafo, se actualizan los nodos correspondientes en el 
+                                                                                // heap para reflejar la nueva conexión entre los nodos, y luego se llama a GRAFICAR_TODO para reflejar visualmente el cambio.
         int cap = estructurasTamano.getOrDefault(grafo, 100);
         String fin = nuevaEtiqueta();
         emitir("    ; AGREGARARISTA " + origen + " " + destino + " EN " + grafo);
@@ -457,7 +899,12 @@ public class GeneradorEnsambladorGrafico {
         emitir(fin + ":");
     }
 
-    private void insertarHash(String clave, String valor, String hash) {
+    private void insertarHash(String clave, String valor, String hash) {// Para insertar en una tabla hash, se calcula el índice usando la función hash, se maneja colisiones si es necesario, 
+                                                                        // se inserta el valor en la posición correspondiente del arreglo de la tabla hash, y luego se llama a GRAFICAR_TODO para 
+                                                                        // reflejar visualmente el cambio. Si la posición calculada por la función hash ya está ocupada por una clave diferente 
+                                                                        // (colisión), se puede usar una estrategia de resolución de colisiones como el encadenamiento o la exploración lineal para 
+                                                                        // encontrar la siguiente posición disponible. En este ejemplo, se asume una estrategia de exploración lineal simple para manejar
+                                                                        //  colisiones, donde se busca la siguiente posición disponible en el arreglo de la tabla hash.
         int cap = estructurasTamano.getOrDefault(hash, 100);
         String fin = nuevaEtiqueta();
         emitir("    ; INSERTAR " + clave + " " + valor + " EN " + hash);
@@ -473,7 +920,8 @@ public class GeneradorEnsambladorGrafico {
         emitir(fin + ":");
     }
 
-    private void actualizarHash(String clave, String valor, String hash) {
+    private void actualizarHash(String clave, String valor, String hash) {// Para actualizar un valor en una tabla hash, se calcula el índice usando la función hash, 
+                                                                        // se busca el valor a actualizar, se modifica si se encuentra, y luego se llama a GRAFICAR_TODO para reflejar el cambio.
         int cap = estructurasTamano.getOrDefault(hash, 100);
         String loop = nuevaEtiqueta();
         String encontrado = nuevaEtiqueta();
@@ -510,7 +958,9 @@ public class GeneradorEnsambladorGrafico {
         emitir(fin + ":");
     }
 
-    private void buscarHash(String clave, String hash) {
+    private void buscarHash(String clave, String hash) {// Para buscar un valor en una tabla hash, se calcula el índice usando la función hash, se busca la clave en el 
+                                                        // arreglo de claves, si se encuentra se obtiene el valor correspondiente del arreglo de valores, y luego se llama a GRAFICAR_TODO para 
+                                                        // mostrar el resultado. Si no se encuentra la clave, se puede manejar como un caso de "no encontrado" y mostrar un mensaje o valor especial.
         String loop = nuevaEtiqueta();
         String encontrado = nuevaEtiqueta();
         String noEncontrado = nuevaEtiqueta();
@@ -543,7 +993,11 @@ public class GeneradorEnsambladorGrafico {
         emitir("    call GRAFICAR_TODO");
     }
 
-    private void traducirPrint(String valor) {
+    private void traducirPrint(String valor) {// Para imprimir un valor, se verifica si el valor es un temporal de recorrido (para evitar imprimirlo en modo gráfico), se posiciona el cursor 
+                                                // en la pantalla gráfica según el tipo de valor, se muestra el texto descriptivo (como "TAMANO: ", "TOPE: ", o "FRENTE: "), 
+                                                // se carga el valor en AX, se llama a la rutina de impresión gráfica, y se marca que el recorrido gráfico ya fue emitido para evitar 
+                                                //  imprimir temporales de recorrido en modo gráfico posteriormente.
+        
         // En modo grafico no se usa la consola de texto normal; el numero se
         // imprime con una rutina grafica propia sobre la pantalla 13h.
         if (temporalesRecorrido.contains(valor)) {
@@ -573,7 +1027,14 @@ public class GeneradorEnsambladorGrafico {
         recorridoGraficoEmitido = true;
     }
 
-    private void traducirRecorridoArbol(String op, String arbol, String resultado) {
+    private void traducirRecorridoArbol(String op, String arbol, String resultado) {// Para imprimir un recorrido de árbol, se verifica si el resultado es un temporal de recorrido 
+                                                                                    // (para evitar imprimirlo en modo gráfico), se posiciona el cursor en la pantalla gráfica según el tipo de recorrido, 
+                                                                                    // se muestra el texto descriptivo (como "PREORDEN: ", "INORDEN: ", "POSTORDEN: ", o "NIVELES: "), 
+                                                                                    // se carga la raíz del árbol en BX, se llama a la rutina de recorrido gráfico correspondiente, y 
+                                                                                    // se marca que el recorrido gráfico ya fue emitido para evitar imprimir temporales de recorrido en modo gráfico 
+                                                                                    // posteriormente. 
+                                                                                    // Si la estructura dada no es un árbol, se muestra un mensaje de advertencia y no se emite el 
+                                                                                    // código de recorrido gráfico.
         if (!resultado.isEmpty()) {
             temporalesRecorrido.add(resultado);
         }
@@ -761,51 +1222,6 @@ public class GeneradorEnsambladorGrafico {
     }
 
     private void agregarRutinasBase() {
-        emitir("DIBUJAR_PIXEL proc");
-        emitir("    push ax");
-        emitir("    push bx");
-        emitir("    mov ah, 0Ch");
-        emitir("    mov bh, 00h");
-        emitir("    int 10h");
-        emitir("    pop bx");
-        emitir("    pop ax");
-        emitir("    ret");
-        emitir("DIBUJAR_PIXEL endp");
-        emitir("");
-        emitir("DIBUJAR_RECTANGULO proc");
-        emitir("    push ax");
-        emitir("    push bx");
-        emitir("    push cx");
-        emitir("    push dx");
-        emitir("    push si");
-        emitir("    push di");
-        emitir("    mov [rect_x], cx");
-        emitir("    mov [rect_y], dx");
-        emitir("    mov [rect_w], si");
-        emitir("    mov [rect_h], di");
-        emitir("    mov [rect_color], al");
-        emitir("dr_fila:");
-        emitir("    mov cx, [rect_x]");
-        emitir("    mov si, [rect_w]");
-        emitir("dr_columna:");
-        emitir("    mov dx, [rect_y]");
-        emitir("    mov al, [rect_color]");
-        emitir("    call DIBUJAR_PIXEL");
-        emitir("    inc cx");
-        emitir("    dec si");
-        emitir("    jnz dr_columna");
-        emitir("    inc word ptr [rect_y]");
-        emitir("    dec word ptr [rect_h]");
-        emitir("    jnz dr_fila");
-        emitir("    pop di");
-        emitir("    pop si");
-        emitir("    pop dx");
-        emitir("    pop cx");
-        emitir("    pop bx");
-        emitir("    pop ax");
-        emitir("    ret");
-        emitir("DIBUJAR_RECTANGULO endp");
-        emitir("");
         emitir("LIMPIAR_PANTALLA proc");
         emitir("    push ax");
         emitir("    mov ax, 0013h");
@@ -1072,12 +1488,12 @@ public class GeneradorEnsambladorGrafico {
 
     private void rutinaGraficaArbol(String nombre) {
         String rec = "GRAFICAR_ARBOL_REC_" + nombre;
-        String fin = "GRAFICAR_ARBOL_FIN_" + nombre;
-        String retorno = "GRAFICAR_ARBOL_RET_" + nombre;
-        String izqOffsetOk = "GRAFICAR_ARBOL_IZQ_OFFSET_OK_" + nombre;
-        String derOffsetOk = "GRAFICAR_ARBOL_DER_OFFSET_OK_" + nombre;
-        String sinIzq = "GRAFICAR_ARBOL_SIN_IZQ_" + nombre;
-        String sinDer = "GRAFICAR_ARBOL_SIN_DER_" + nombre;
+        String fin = nuevaEtiqueta();
+        String retorno = nuevaEtiqueta();
+        String izqOffsetOk = nuevaEtiqueta();
+        String derOffsetOk = nuevaEtiqueta();
+        String sinIzq = nuevaEtiqueta();
+        String sinDer = nuevaEtiqueta();
 
         emitir("GRAFICAR_ARBOL_" + nombre + " proc");
         emitir("    mov bx, [" + nombre + "_root]");
@@ -1212,7 +1628,7 @@ public class GeneradorEnsambladorGrafico {
 
     private void rutinaRecorridoPreorden(String nombre) {
         String proc = "RECORRIDO_PREORDEN_" + nombre;
-        String fin = proc + "_FIN";
+        String fin = nuevaEtiqueta();
         emitir(proc + " proc");
         emitir("    cmp bx, 0");
         emitir("    je " + fin);
@@ -1231,7 +1647,7 @@ public class GeneradorEnsambladorGrafico {
 
     private void rutinaRecorridoInorden(String nombre) {
         String proc = "RECORRIDO_INORDEN_" + nombre;
-        String fin = proc + "_FIN";
+        String fin = nuevaEtiqueta();
         emitir(proc + " proc");
         emitir("    cmp bx, 0");
         emitir("    je " + fin);
@@ -1250,7 +1666,7 @@ public class GeneradorEnsambladorGrafico {
 
     private void rutinaRecorridoPostorden(String nombre) {
         String proc = "RECORRIDO_POSTORDEN_" + nombre;
-        String fin = proc + "_FIN";
+        String fin = nuevaEtiqueta();
         emitir(proc + " proc");
         emitir("    cmp bx, 0");
         emitir("    je " + fin);
@@ -1271,10 +1687,10 @@ public class GeneradorEnsambladorGrafico {
 
     private void rutinaRecorridoNiveles(String nombre) {
         String proc = "RECORRIDO_NIVELES_" + nombre;
-        String loop = proc + "_LOOP";
-        String sinIzq = proc + "_SIN_IZQ";
-        String sinDer = proc + "_SIN_DER";
-        String fin = proc + "_FIN";
+        String loop = nuevaEtiqueta();
+        String sinIzq = nuevaEtiqueta();
+        String sinDer = nuevaEtiqueta();
+        String fin = nuevaEtiqueta();
         emitir(proc + " proc");
         emitir("    cmp bx, 0");
         emitir("    je " + fin);
@@ -1491,11 +1907,6 @@ public class GeneradorEnsambladorGrafico {
                     sb.append("    gfx_q_front dw 0\n");
                     sb.append("    gfx_q_rear dw 0\n");
                 }
-                sb.append("    rect_x dw 0\n");
-                sb.append("    rect_y dw 0\n");
-                sb.append("    rect_w dw 0\n");
-                sb.append("    rect_h dw 0\n");
-                sb.append("    rect_color db 0\n");
                 for (Map.Entry<String, String> entry : estructurasTipo.entrySet()) {
                     String n = entry.getKey();
                     String t = entry.getValue();
@@ -1552,6 +1963,74 @@ public class GeneradorEnsambladorGrafico {
             registrarVariable(valor);
             emitir("    mov ax, [" + valor + "]");
         }
+    }
+
+    private void cargarBX(String valor) {
+        if (valor == null || valor.isEmpty()) {
+            emitir("    mov bx, 0");
+        } else if (esNumero(valor)) {
+            emitir("    mov bx, " + valor);
+        } else {
+            registrarVariable(valor);
+            emitir("    mov bx, [" + valor + "]");
+        }
+    }
+
+    private void emitirOperacionConAX(String instruccion, String valor) {
+        if (valor == null || valor.isEmpty()) {
+            emitir("    " + instruccion + " ax, 0");
+        } else if (esNumero(valor)) {
+            emitir("    " + instruccion + " ax, " + valor);
+        } else {
+            registrarVariable(valor);
+            emitir("    " + instruccion + " ax, [" + valor + "]");
+        }
+    }
+
+    private void compararAXCon(String valor) {
+        if (valor == null || valor.isEmpty()) {
+            emitir("    cmp ax, 0");
+        } else if (esNumero(valor)) {
+            emitir("    cmp ax, " + valor);
+        } else {
+            registrarVariable(valor);
+            emitir("    cmp ax, [" + valor + "]");
+        }
+    }
+
+    private String saltoComparacion(String op) {
+        switch (op) {
+            case "<":
+                return "jl";
+            case ">":
+                return "jg";
+            case "==":
+                return "je";
+            case "!=":
+                return "jne";
+            case "<=":
+                return "jle";
+            case ">=":
+                return "jge";
+            default:
+                return "je";
+        }
+    }
+
+    private String contadorEstructura(String estructura, String tipo) {
+        if (tipo == null) {
+            return null;
+        }
+        if ("PILA".equals(tipo)) {
+            return estructura + "_top";
+        }
+        if ("COLA".equals(tipo) || "LISTA".equals(tipo) || "HASH".equals(tipo)) {
+            return estructura + "_count";
+        }
+        if ("GRAFO".equals(tipo)) {
+            return estructura + "_node_count";
+        }
+        return null;
     }
 
     private void registrarVariable(String nombre) {

@@ -1,0 +1,92 @@
+// ============================================================
+// EJEMPLO: ARBOL BINARIO DE BUSQUEDA (BST)
+// Operaciones: AGREGARNODO, ELIMINAR, BUSCAR,
+//              PREORDEN, INORDEN, POSTORDEN, RECORRIDOPORNIVELES,
+//              ALTURA, HOJAS, NODOS
+// ============================================================
+
+CREAR ARBOL_BINARIO miArbol;
+
+// --- Insertar nodos (clave valor) ---
+// El BST se ordena por VALOR automaticamente
+AGREGARNODO 1 50 EN miArbol;
+AGREGARNODO 2 30 EN miArbol;
+AGREGARNODO 3 70 EN miArbol;
+AGREGARNODO 4 20 EN miArbol;
+AGREGARNODO 5 40 EN miArbol;
+AGREGARNODO 6 60 EN miArbol;
+AGREGARNODO 7 80 EN miArbol;
+AGREGARNODO 8 10 EN miArbol;
+AGREGARNODO 9 25 EN miArbol;
+
+// Arbol resultante:
+//          50
+//        /    \
+//       30     70
+//      /  \   /  \
+//    20   40 60   80
+//   /  \
+//  10  25
+
+
+// --- Propiedades del arbol ---
+//CREAR NUMERO altura = 0;
+//altura = ALTURA EN miArbol;
+//MOSTRAR altura;
+
+//CREAR NUMERO hojas = 0;
+//hojas = HOJAS EN miArbol;
+//MOSTRAR hojas;
+
+//CREAR NUMERO nodos = 0;
+//nodos = NODOS EN miArbol;
+//MOSTRAR nodos;
+
+// --- Recorridos ---
+MOSTRAR INORDEN EN miArbol;
+MOSTRAR PREORDEN EN miArbol;
+MOSTRAR POSTORDEN EN miArbol;
+MOSTRAR RECORRIDOPORNIVELES EN miArbol;
+
+// --- Verificar altura con IF ---
+//IF (altura > 3) {
+//    MOSTRAR 1;
+//}
+
+// --- BUSCAR valores ---
+BUSCAR 40 EN miArbol;
+BUSCAR 99 EN miArbol;
+
+// --- ELIMINAR hoja (sin hijos) ---
+ELIMINAR 10 EN miArbol;
+ELIMINAR 25 EN miArbol;
+
+// --- ELIMINAR nodo con un hijo ---
+ELIMINAR 20 EN miArbol;
+
+// --- ELIMINAR nodo con dos hijos (sucesor inorden) ---
+ELIMINAR 30 EN miArbol;
+
+// Arbol tras eliminaciones:
+//       50
+//      /  \
+//    40    70
+//          / \
+//         60  80
+
+// --- Recorrido INORDEN tras eliminaciones (debe estar ordenado) ---
+MOSTRAR INORDEN EN miArbol;
+
+// --- Propiedades actualizadas ---
+//nodos = NODOS EN miArbol;
+//MOSTRAR nodos;
+
+// --- Insertar nuevos nodos ---
+AGREGARNODO 10 35 EN miArbol;
+AGREGARNODO 11 65 EN miArbol;
+AGREGARNODO 12 45 EN miArbol;
+
+MOSTRAR INORDEN EN miArbol;
+MOSTRAR RECORRIDOPORNIVELES EN miArbol;
+
+MOSTRAR 999;

@@ -4,11 +4,13 @@
 ; ============================================
 
 .model small
-.stack 100h
+.stack 1000h
 
 .data
     titulo db 'DSL - VISUALIZACION GRAFICA', 0
 
+    HEAP dw 1000 dup(0)
+    HEAP_PTR dw 2
     gfx_i dw 0
     gfx_valor dw 0
     gfx_busqueda dw 0
@@ -16,14 +18,20 @@
     gfx_busqueda_activa dw 0
     gfx_ultimo_desapilado dw 0
     gfx_color db 0Fh
-    rect_x dw 0
-    rect_y dw 0
-    rect_w dw 0
-    rect_h dw 0
-    rect_color db 0
-    miHash_keys dw 100 dup(0)
-    miHash_values dw 100 dup(0)
-    miHash_count dw 0
+    listaOpt_head dw 0
+    listaOpt_tail dw 0
+    listaOpt_count dw 0
+    baseLista dw 0
+    valorLista dw 0
+    copiaLista dw 0
+    i dw 0
+    T3 dw 0
+    T4 dw 0
+    T5 dw 0
+    T6 dw 0
+    T7 dw 0
+    T8 dw 0
+    T9 dw 0
 
 .code
 main proc
@@ -34,101 +42,217 @@ main proc
     mov ax, 0013h
     int 10h
 
-    ; CREAR HASH miHash TAMANO 100
+    ; CREAR LISTA listaOpt TAMANO 10
     call GRAFICAR_TODO
-    ; INSERTAR 101 1000 EN miHash
-    cmp word ptr [miHash_count], 100
-    jge GFX_L1
-    mov bx, [miHash_count]
-    shl bx, 1
-    mov ax, 101
-    mov miHash_keys[bx], ax
-    mov ax, 1000
-    mov miHash_values[bx], ax
-    inc word ptr [miHash_count]
+    mov ax, 40
+    mov [baseLista], ax
+    mov ax, 60
+    mov [valorLista], ax
+    mov ax, 60
+    mov [copiaLista], ax
+    ; INSERTAR_FINAL 60 EN listaOpt
+    mov ax, 60
+    mov si, [HEAP_PTR]
+    add word ptr [HEAP_PTR], 4
+    mov HEAP[si], ax
+    mov word ptr HEAP[si+2], 0
+    cmp word ptr [listaOpt_head], 0
+    jne GFX_L1
+    mov [listaOpt_head], si
+    mov [listaOpt_tail], si
+    jmp GFX_L3
 GFX_L1:
-    call GRAFICAR_TODO
-    ; INSERTAR 102 2000 EN miHash
-    cmp word ptr [miHash_count], 100
-    jge GFX_L2
-    mov bx, [miHash_count]
-    shl bx, 1
-    mov ax, 102
-    mov miHash_keys[bx], ax
-    mov ax, 2000
-    mov miHash_values[bx], ax
-    inc word ptr [miHash_count]
-GFX_L2:
-    call GRAFICAR_TODO
-    ; INSERTAR 103 3000 EN miHash
-    cmp word ptr [miHash_count], 100
-    jge GFX_L3
-    mov bx, [miHash_count]
-    shl bx, 1
-    mov ax, 103
-    mov miHash_keys[bx], ax
-    mov ax, 3000
-    mov miHash_values[bx], ax
-    inc word ptr [miHash_count]
+    mov bx, [listaOpt_tail]
+    mov HEAP[bx+2], si
+    mov [listaOpt_tail], si
 GFX_L3:
+    inc word ptr [listaOpt_count]
     call GRAFICAR_TODO
-    ; BUSCAR 102 EN miHash
-    mov ax, 102
-    mov [gfx_busqueda], ax
-    mov word ptr [gfx_valor], 0
-    mov si, 0
+    ; INSERTAR_FINAL 60 EN listaOpt
+    mov ax, 60
+    mov si, [HEAP_PTR]
+    add word ptr [HEAP_PTR], 4
+    mov HEAP[si], ax
+    mov word ptr HEAP[si+2], 0
+    cmp word ptr [listaOpt_head], 0
+    jne GFX_L4
+    mov [listaOpt_head], si
+    mov [listaOpt_tail], si
+    jmp GFX_L6
 GFX_L4:
-    cmp si, [miHash_count]
-    jge GFX_L6
-    mov bx, si
-    shl bx, 1
-    mov ax, miHash_keys[bx]
-    cmp ax, [gfx_busqueda]
-    je GFX_L5
-    inc si
-    jmp GFX_L4
-GFX_L5:
-    mov ax, miHash_values[bx]
-    mov [gfx_valor], ax
-    jmp GFX_L7
+    mov bx, [listaOpt_tail]
+    mov HEAP[bx+2], si
+    mov [listaOpt_tail], si
 GFX_L6:
-    mov word ptr [gfx_valor], 0
-GFX_L7:
-    mov ax, [gfx_valor]
-    mov [gfx_busqueda_resultado], ax
-    mov word ptr [gfx_busqueda_activa], 1
+    inc word ptr [listaOpt_count]
     call GRAFICAR_TODO
-    ; ACTUALIZAR 102 2500 EN miHash
-    mov ax, 102
-    mov [gfx_busqueda], ax
-    mov si, 0
+    ; INSERTAR_INICIO 10 EN listaOpt
+    mov ax, 10
+    mov si, [HEAP_PTR]
+    add word ptr [HEAP_PTR], 4
+    mov HEAP[si], ax
+    mov word ptr HEAP[si+2], 0
+    cmp word ptr [listaOpt_head], 0
+    jne GFX_L8
+    mov [listaOpt_head], si
+    mov [listaOpt_tail], si
+    jmp GFX_L9
 GFX_L8:
-    cmp si, [miHash_count]
-    jge GFX_L10
-    mov bx, si
-    shl bx, 1
-    mov ax, miHash_keys[bx]
-    cmp ax, [gfx_busqueda]
-    je GFX_L9
-    inc si
-    jmp GFX_L8
+    mov bx, [listaOpt_head]
+    mov HEAP[si+2], bx
+    mov [listaOpt_head], si
+    jmp GFX_L9
+    cmp word ptr [listaOpt_head], 0
+    jne GFX_L7
+    mov [listaOpt_head], si
+    mov [listaOpt_tail], si
+    jmp GFX_L9
+GFX_L7:
+    mov bx, [listaOpt_tail]
+    mov HEAP[bx+2], si
+    mov [listaOpt_tail], si
 GFX_L9:
-    mov ax, 2500
-    mov miHash_values[bx], ax
+    inc word ptr [listaOpt_count]
+    call GRAFICAR_TODO
+    mov ax, 0
+    mov [i], ax
+L1:
+    ; T3 = i < 3
+    mov ax, [i]
+    cmp ax, 3
+    mov word ptr [T3], 0
+    jl GFX_L10
     jmp GFX_L11
 GFX_L10:
-    cmp word ptr [miHash_count], 100
-    jge GFX_L11
-    mov bx, [miHash_count]
-    shl bx, 1
-    mov ax, [gfx_busqueda]
-    mov miHash_keys[bx], ax
-    mov ax, 2500
-    mov miHash_values[bx], ax
-    inc word ptr [miHash_count]
+    mov word ptr [T3], 1
 GFX_L11:
+    mov ax, [T3]
+    cmp ax, 0
+    je L2
+    ; INSERTAR_FINAL i EN listaOpt
+    mov ax, [i]
+    mov si, [HEAP_PTR]
+    add word ptr [HEAP_PTR], 4
+    mov HEAP[si], ax
+    mov word ptr HEAP[si+2], 0
+    cmp word ptr [listaOpt_head], 0
+    jne GFX_L12
+    mov [listaOpt_head], si
+    mov [listaOpt_tail], si
+    jmp GFX_L14
+GFX_L12:
+    mov bx, [listaOpt_tail]
+    mov HEAP[bx+2], si
+    mov [listaOpt_tail], si
+GFX_L14:
+    inc word ptr [listaOpt_count]
     call GRAFICAR_TODO
+    ; T4 = i + 1
+    mov ax, [i]
+    add ax, 1
+    mov [T4], ax
+    mov ax, [T4]
+    mov [i], ax
+    jmp L1
+L2:
+    ; VACIA EN listaOpt -> T5
+    mov word ptr [T5], 0
+    cmp word ptr [listaOpt_count], 0
+    je GFX_L15
+    jmp GFX_L16
+GFX_L15:
+    mov word ptr [T5], 1
+GFX_L16:
+    ; T6 = T5 == 0
+    mov ax, [T5]
+    cmp ax, 0
+    mov word ptr [T6], 0
+    je GFX_L17
+    jmp GFX_L18
+GFX_L17:
+    mov word ptr [T6], 1
+GFX_L18:
+    mov ax, [T6]
+    cmp ax, 0
+    je L3
+    ; Operacion grafica pendiente: BUSCAR 60 EN listaOpt
     call GRAFICAR_TODO
+L3:
+    ; VACIA EN listaOpt -> T7
+    mov word ptr [T7], 0
+    cmp word ptr [listaOpt_count], 0
+    je GFX_L19
+    jmp GFX_L20
+GFX_L19:
+    mov word ptr [T7], 1
+GFX_L20:
+    ; T8 = T7 == 0
+    mov ax, [T7]
+    cmp ax, 0
+    mov word ptr [T8], 0
+    je GFX_L21
+    jmp GFX_L22
+GFX_L21:
+    mov word ptr [T8], 1
+GFX_L22:
+    mov ax, [T8]
+    cmp ax, 0
+    je L6
+    ; ELIMINAR_INICIO EN listaOpt
+    cmp word ptr [listaOpt_head], 0
+    je GFX_L23
+    mov bx, [listaOpt_head]
+    mov ax, HEAP[bx+2]
+    mov [listaOpt_head], ax
+    dec word ptr [listaOpt_count]
+    cmp ax, 0
+    jne GFX_L23
+    mov word ptr [listaOpt_tail], 0
+GFX_L23:
+    call GRAFICAR_TODO
+    jmp L3
+L6:
+    ; TAMANO EN listaOpt -> T9
+    mov ax, [listaOpt_count]
+    mov [T9], ax
+    ; MOSTRAR T9 en modo grafico
+    mov cx, 10
+    mov dx, 70
+    call SET_CURSOR_PIXEL
+    mov al, 'T'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, 'A'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, 'M'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, 'A'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, 'N'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, 'O'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, ':'
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov al, ' '
+    mov ah, 0Eh
+    mov bl, [gfx_color]
+    int 10h
+    mov ax, [T9]
+    call PRINT_NUM_GRAFICO
     mov ah, 00h
     int 16h
     mov ax, 0003h
@@ -140,51 +264,6 @@ main endp
 ; ============================================
 ; RUTINAS GRAFICAS
 ; ============================================
-
-DIBUJAR_PIXEL proc
-    push ax
-    push bx
-    mov ah, 0Ch
-    mov bh, 00h
-    int 10h
-    pop bx
-    pop ax
-    ret
-DIBUJAR_PIXEL endp
-
-DIBUJAR_RECTANGULO proc
-    push ax
-    push bx
-    push cx
-    push dx
-    push si
-    push di
-    mov [rect_x], cx
-    mov [rect_y], dx
-    mov [rect_w], si
-    mov [rect_h], di
-    mov [rect_color], al
-dr_fila:
-    mov cx, [rect_x]
-    mov si, [rect_w]
-dr_columna:
-    mov dx, [rect_y]
-    mov al, [rect_color]
-    call DIBUJAR_PIXEL
-    inc cx
-    dec si
-    jnz dr_columna
-    inc word ptr [rect_y]
-    dec word ptr [rect_h]
-    jnz dr_fila
-    pop di
-    pop si
-    pop dx
-    pop cx
-    pop bx
-    pop ax
-    ret
-DIBUJAR_RECTANGULO endp
 
 LIMPIAR_PANTALLA proc
     push ax
@@ -303,7 +382,7 @@ PAUSA_GRAFICA endp
 GRAFICAR_TODO proc
     mov byte ptr [gfx_color], 0Fh
     call LIMPIAR_PANTALLA
-    call GRAFICAR_HASH_miHash
+    call GRAFICAR_LISTA_listaOpt
     call DIBUJAR_ULTIMA_BUSQUEDA
     ret
 GRAFICAR_TODO endp
@@ -358,597 +437,29 @@ DUB_FIN:
     ret
 DIBUJAR_ULTIMA_BUSQUEDA endp
 
-GRAFICAR_HASH_miHash proc
-    mov cx, 104
-    mov dx, 104
-    call SET_CURSOR_PIXEL
-    mov al, '+'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '+'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '+'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '+'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov cx, 104
-    mov dx, 112
-    call SET_CURSOR_PIXEL
-    mov al, '|'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, ' '
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, 'I'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, 'N'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, 'D'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, 'I'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, 'C'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, 'E'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, ' '
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '|'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, ' '
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, 'C'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, 'L'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, 'A'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, 'V'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, 'E'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, ' '
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '|'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, ' '
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, 'V'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, 'A'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, 'L'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, 'O'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, 'R'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, ' '
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '|'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov cx, 104
-    mov dx, 120
-    call SET_CURSOR_PIXEL
-    mov al, '+'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '+'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '+'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '+'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
+GRAFICAR_LISTA_listaOpt proc
+    mov bx, [listaOpt_head]
     mov word ptr [gfx_i], 0
-miHash_gh_loop:
+listaOpt_gl_loop:
+    cmp bx, 0
+    je listaOpt_gl_fin
+    mov ax, HEAP[bx]
+    mov [gfx_valor], ax
+    push bx
     mov ax, [gfx_i]
-    cmp ax, [miHash_count]
-    jge miHash_gh_fin
-    cmp ax, 8
-    jge miHash_gh_fin
-    mov ax, [gfx_i]
-    mov bx, 8
+    mov bx, 42
     mul bx
-    mov dx, 128
-    add dx, ax
-    mov cx, 104
+    mov cx, 10
+    add cx, ax
+    mov dx, 48
     call SET_CURSOR_PIXEL
-    mov al, '|'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, ' '
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, ' '
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, ' '
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, ' '
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, ' '
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, ' '
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, ' '
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, ' '
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '|'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, ' '
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, ' '
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, ' '
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, ' '
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, ' '
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, ' '
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, ' '
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '|'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, ' '
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, ' '
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, ' '
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, ' '
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, ' '
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, ' '
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, ' '
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '|'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov ax, [gfx_i]
-    mov bx, 8
-    mul bx
-    mov dx, 128
-    add dx, ax
-    mov cx, 136
-    call SET_CURSOR_PIXEL
-    mov ax, [gfx_i]
-    inc ax
-    call PRINT_NUM_GRAFICO
-    mov ax, [gfx_i]
-    mov si, 8
-    mul si
-    mov dx, 128
-    add dx, ax
-    mov cx, 200
-    call SET_CURSOR_PIXEL
-    mov bx, [gfx_i]
-    shl bx, 1
-    mov ax, miHash_keys[bx]
-    call PRINT_NUM_GRAFICO
-    mov ax, [gfx_i]
-    mov si, 8
-    mul si
-    mov dx, 128
-    add dx, ax
-    mov cx, 264
-    call SET_CURSOR_PIXEL
-    mov bx, [gfx_i]
-    shl bx, 1
-    mov ax, miHash_values[bx]
-    call PRINT_NUM_GRAFICO
+    call PRINT_VALOR_CORCHETES
+    pop bx
+    mov bx, HEAP[bx+2]
     inc word ptr [gfx_i]
-    jmp miHash_gh_loop
-miHash_gh_fin:
-    mov ax, [miHash_count]
-    cmp ax, 8
-    jle miHash_gh_fin_borde
-    mov ax, 8
-miHash_gh_fin_borde:
-    mov bx, 8
-    mul bx
-    mov dx, 128
-    add dx, ax
-    mov cx, 104
-    call SET_CURSOR_PIXEL
-    mov al, '+'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '+'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '+'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '-'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
-    mov al, '+'
-    mov ah, 0Eh
-    mov bl, [gfx_color]
-    int 10h
+    jmp listaOpt_gl_loop
+listaOpt_gl_fin:
     ret
-GRAFICAR_HASH_miHash endp
+GRAFICAR_LISTA_listaOpt endp
 
 end main
