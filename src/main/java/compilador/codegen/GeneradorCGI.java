@@ -22,6 +22,7 @@ public class GeneradorCGI {
     // AST: representa la estructura del programa.
     // CGI: representa acciones simples en cuadruplos.
     // ASM: toma esos cuadruplos y los convierte a instrucciones de maquina.
+    
     private List<Cuadruplo> codigo;// Lista de cuadruplos generados; cada cuadruplo es una instrucción de tres direcciones.
     private int contadorTemporales;//   Contador para generar nombres únicos de temporales (T1, T2, T3, ...)   
     private int contadorEtiquetas;//    Contador para generar nombres únicos de etiquetas (L1, L2, L3, ...)

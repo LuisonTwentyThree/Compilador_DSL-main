@@ -27,7 +27,7 @@ import compilador.core.Cuadruplo;
  */
 public class OptimizadorCGI {
 
-    private static final int MAX_PASADAS = 6;
+    private static final int MAX_PASADAS = 6;// Limite para evitar ciclos infinitos en casos extremos. Normalmente se estabiliza en 2 o 3 pasadas.
 
     public List<Cuadruplo> optimizar(List<Cuadruplo> codigo) {
         // La optimizacion trabaja sobre una copia para no modificar la lista
