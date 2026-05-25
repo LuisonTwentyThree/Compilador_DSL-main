@@ -1040,9 +1040,6 @@ GFX_L120:
     mov bx, [miArbol_root]
     call RECORRIDO_NIVELES_miArbol
     ; MOSTRAR T7 omitido: el recorrido ya se imprimio en modo grafico
-    ; MOSTRAR 999 en modo grafico
-    mov ax, 999
-    call PRINT_NUM_GRAFICO
     mov ah, 00h
     int 16h
     mov ax, 0003h
